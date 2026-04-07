@@ -45,7 +45,7 @@
     </header>
 
     <main class="px-4 max-w-lg mx-auto lg:max-w-full">
-        <!-- Dashboard / Kalendarz -->
+        <!-- Dashboard -->
         <section id="view-dashboard" class="view-section active space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
                 <div class="flex justify-between items-center mb-6">
@@ -79,7 +79,7 @@
                 <div class="flex flex-col gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                     <div class="flex items-center justify-between">
                         <label class="text-[10px] font-black text-slate-400 uppercase">Data treningu:</label>
-                        <input type="date" id="workoutDateInput" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-indigo-600 outline-none">
+                        <input type="date" id="workoutDateInput" onchange="renderWorkout()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-indigo-600 outline-none">
                     </div>
                     <div class="flex gap-2">
                         <input type="text" id="exerciseInput" placeholder="Dodaj nowe ćwiczenie..." class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 ring-indigo-500">
@@ -92,7 +92,6 @@
                         <thead class="bg-slate-50">
                             <tr id="workoutTableHeader">
                                 <th class="sticky-col bg-slate-50">Ćwiczenie</th>
-                                <!-- Tu wskoczą kolumny dat historycznych -->
                             </tr>
                         </thead>
                         <tbody id="workoutTableBody"></tbody>
@@ -105,7 +104,7 @@
             </div>
         </section>
 
-        <!-- Widok Generyczny (Kroki, Dieta, itp.) -->
+        <!-- Widok Generyczny -->
         <section id="view-generic" class="view-section space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                 <h3 id="genericInputTitle" class="font-bold text-slate-800 mb-4 uppercase tracking-wider text-[10px]">Dodaj wpis</h3>
@@ -139,12 +138,8 @@
                 <button onclick="closeModal()" class="text-slate-300 hover:text-slate-500"><i class="fas fa-times-circle text-2xl"></i></button>
             </div>
             <div id="selectedDayTasks" class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2 hide-scrollbar"></div>
-            
             <div class="space-y-3 bg-slate-50 p-4 rounded-3xl">
-                <p class="text-[10px] font-bold text-slate-400 uppercase ml-1">Zarządzaj zadaniami</p>
-                <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-white border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
-                    <option value="">Wybierz szablon...</option>
-                </select>
+                <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-white border border-slate-200 rounded-2xl p-3 text-sm outline-none"></select>
                 <div class="flex gap-2">
                     <input type="text" id="customTaskInput" placeholder="Nowe zadanie..." class="flex-1 bg-white border border-slate-200 rounded-2xl p-3 text-sm outline-none">
                     <button onclick="addTaskToDay()" class="bg-indigo-600 text-white px-5 rounded-2xl font-bold"><i class="fas fa-plus"></i></button>
@@ -156,7 +151,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
@@ -165,7 +160,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-planner-v1';
 
         const defaultState = {
-            dutyDB: ["Praca", "Trening", "Nauka", "Zakupy"],
+            dutyDB: ["Praca", "Trening", "Nauka"],
             calendar: {},
             reading: {},
             steps: {},
@@ -174,24 +169,31 @@
             workout: { 
                 currentPlan: 1, 
                 plans: { 
-                    1: { exercises: [{name: "Wyciskanie", sets: 4, history: {}}] }, 
-                    2: { exercises: [{name: "Przysiady", sets: 3, history: {}}] } 
+                    1: { exercises: [] }, 
+                    2: { exercises: [] } 
                 } 
             }
         };
 
         let user = null;
-        let state = JSON.parse(JSON.stringify(defaultState));
+        let state = null;
         let activeView = 'dashboard';
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Auth
+        // Inicjalizacja dat w polach input
+        window.onload = () => {
+            document.getElementById('workoutDateInput').value = todayStr;
+            document.getElementById('genericDateInput').value = todayStr;
+        };
+
         const initAuth = async () => {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) { console.error("Auth error", e); }
         };
         initAuth();
 
@@ -206,16 +208,25 @@
                 onSnapshot(docRef, (snap) => {
                     if (snap.exists()) {
                         state = snap.data();
-                        renderAll();
+                        // Upewnienie się że struktura workout jest poprawna
+                        if(!state.workout || !state.workout.plans) {
+                            state.workout = JSON.parse(JSON.stringify(defaultState.workout));
+                        }
                     } else {
-                        save(); // Inicjalizacja pustego stanu
+                        state = JSON.parse(JSON.stringify(defaultState));
+                        save();
                     }
-                }, (err) => console.error("Firestore Error:", err));
+                    renderAll();
+                }, (err) => {
+                    console.error("Firestore Error:", err);
+                    statusBadge.innerText = 'Błąd Synchronizacji';
+                    statusBadge.classList.replace('bg-emerald-500', 'bg-red-500');
+                });
             }
         });
 
         async function save() {
-            if (!user) return;
+            if (!user || !state) return;
             await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
         }
 
@@ -229,15 +240,13 @@
 
             if (['reading', 'steps', 'diet', 'measure'].includes(v)) {
                 document.getElementById('view-generic').classList.add('active');
-                document.getElementById('genericDateInput').value = todayStr;
                 renderGenericView(v);
             } else {
                 document.getElementById(`view-${v}`).classList.add('active');
-                if(v === 'workout') document.getElementById('workoutDateInput').value = todayStr;
             }
             
             const titles = { dashboard: 'Planer', workout: 'Trening', reading: 'Czytanie', steps: 'Kroki', diet: 'Dieta', measure: 'Waga' };
-            document.getElementById('viewTitle').innerText = titles[v];
+            document.getElementById('viewTitle').innerText = titles[v] || 'Planer';
             renderAll();
         };
 
@@ -245,7 +254,7 @@
         window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; save(); };
         window.addExercise = () => {
             const name = document.getElementById('exerciseInput').value;
-            if (name) {
+            if (name && state) {
                 state.workout.plans[state.workout.currentPlan].exercises.push({ name, sets: 4, history: {} });
                 save();
                 document.getElementById('exerciseInput').value = '';
@@ -277,35 +286,33 @@
         };
 
         window.removeExercise = (idx) => {
-            if(confirm("Czy na pewno chcesz usunąć to ćwiczenie z planu?")) {
+            if(confirm("Usunąć ćwiczenie z planu?")) {
                 state.workout.plans[state.workout.currentPlan].exercises.splice(idx, 1);
                 save();
             }
         };
 
         window.deleteWorkoutHistory = (exIdx, date) => {
-            if(confirm(`Usunąć sesję z dnia ${date}?`)) {
+            if(confirm(`Usunąć historię z ${date}?`)) {
                 delete state.workout.plans[state.workout.currentPlan].exercises[exIdx].history[date];
                 save();
             }
         };
 
         function renderWorkout() {
+            if (!state || !state.workout) return;
             const cp = state.workout.currentPlan;
             const plan = state.workout.plans[cp];
-            const exercises = plan.exercises;
+            const exercises = plan.exercises || [];
             const targetDate = document.getElementById('workoutDateInput').value || todayStr;
 
-            // Przyciski Planów
             document.getElementById('btnPlan1').className = cp === 1 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
             document.getElementById('btnPlan2').className = cp === 2 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
 
-            // Zbieranie wszystkich dat historii (oprócz wybranej do edycji)
             const allDates = new Set();
-            exercises.forEach(ex => Object.keys(ex.history).forEach(d => { if(d !== targetDate) allDates.add(d) }));
+            exercises.forEach(ex => Object.keys(ex.history || {}).forEach(d => { if(d !== targetDate) allDates.add(d) }));
             const sortedDates = Array.from(allDates).sort((a,b) => new Date(b) - new Date(a));
 
-            // Budowanie nagłówka
             const header = document.getElementById('workoutTableHeader');
             header.innerHTML = `<th class="sticky-col bg-slate-50 text-[10px] font-black text-slate-400 uppercase">Ćwiczenie</th>`;
             sortedDates.forEach(d => {
@@ -313,10 +320,14 @@
             });
             header.innerHTML += `<th class="text-center bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">SESJA (${targetDate.split('-').reverse().join('.')})</th>`;
 
-            // Budowanie tabeli
             const tbody = document.getElementById('workoutTableBody');
+            if (exercises.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="100" class="p-10 text-center text-slate-300 italic text-sm">Brak ćwiczeń w tym planie. Dodaj pierwsze powyżej!</td></tr>`;
+                return;
+            }
+
             tbody.innerHTML = exercises.map((ex, exIdx) => {
-                const activeSession = ex.history[targetDate] || Array(ex.sets).fill({w:'', r:''});
+                const activeSession = (ex.history && ex.history[targetDate]) ? ex.history[targetDate] : Array(ex.sets).fill({w:'', r:''});
                 
                 let historyCols = sortedDates.map(d => {
                     const hSession = ex.history[d] || [];
@@ -331,9 +342,9 @@
                         ${Array.from({length: ex.sets}).map((_, sIdx) => {
                             const sVal = activeSession[sIdx] || {w:'', r:''};
                             return `<div class="flex gap-1 justify-center">
-                                <input id="w-${exIdx}-${sIdx}" type="number" value="${sVal.w}" placeholder="kg" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none focus:ring-1 ring-indigo-400">
+                                <input id="w-${exIdx}-${sIdx}" type="number" value="${sVal.w}" placeholder="kg" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
                                 <span class="text-indigo-200">x</span>
-                                <input id="r-${exIdx}-${sIdx}" type="number" value="${sVal.r}" placeholder="powt" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none focus:ring-1 ring-indigo-400">
+                                <input id="r-${exIdx}-${sIdx}" type="number" value="${sVal.r}" placeholder="powt" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
                             </div>`;
                         }).join('')}
                     </div>
@@ -355,45 +366,11 @@
             }).join('');
         }
 
-        // --- LOGI GENERYCZNE ---
-        function renderGenericView(type) {
-            const container = document.getElementById('genericInputContainer');
-            const title = document.getElementById('genericInputTitle');
-            const map = state[type];
-            
-            const inputs = {
-                reading: `<input type="number" id="genInp" placeholder="Strony" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                steps: `<input type="number" id="genInp" placeholder="Kroki" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                diet: `<input type="number" id="genKcal" placeholder="Kcal" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
-                       <input type="number" id="genProt" placeholder="Białko" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                measure: `<input type="number" step="0.1" id="genW" placeholder="Waga" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
-                          <input type="number" step="0.1" id="genF" placeholder="Fat%" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`
-            };
-
-            title.innerText = `Dodaj: ${type}`;
-            container.innerHTML = inputs[type] + `<button onclick="saveGeneric('${type}')" class="bg-indigo-600 text-white px-5 rounded-xl font-bold"><i class="fas fa-save"></i></button>`;
-
-            const historyCont = document.getElementById('genericHistory');
-            historyCont.innerHTML = Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).map(date => {
-                const val = map[date];
-                let display = "";
-                if (type === 'diet') display = `<b>${val.kcal}</b> kcal | <b>${val.prot}</b>g B`;
-                else if (type === 'measure') display = `<b>${val.w}</b> kg | <b>${val.f}</b>%`;
-                else display = `<b>${val}</b>`;
-
-                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm group">
-                    <div>
-                        <span class="text-[10px] font-black text-slate-300 uppercase block">${date.split('-').reverse().join('.')}</span>
-                        <span class="text-sm text-slate-700">${display}</span>
-                    </div>
-                    <button onclick="deleteLog('${type}', '${date}')" class="w-8 h-8 rounded-full bg-red-50 text-red-400 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash-alt text-xs"></i></button>
-                </div>`;
-            }).join('');
-        }
-
+        // --- GENERYCZNE ---
         window.saveGeneric = (type) => {
             const date = document.getElementById('genericDateInput').value;
-            if(!date) return;
+            if(!date || !state) return;
+            if(!state[type]) state[type] = {};
 
             if (type === 'reading' || type === 'steps') {
                 const v = parseInt(document.getElementById('genInp').value);
@@ -413,19 +390,52 @@
         };
 
         window.deleteLog = (type, date) => {
-            if(confirm("Czy chcesz usunąć ten wpis?")) {
-                delete state[type][date];
-                save();
-            }
+            if(confirm("Usunąć?")) { delete state[type][date]; save(); }
         };
+
+        function renderGenericView(type) {
+            if (!state) return;
+            const container = document.getElementById('genericInputContainer');
+            const title = document.getElementById('genericInputTitle');
+            const map = state[type] || {};
+            
+            const inputs = {
+                reading: `<input type="number" id="genInp" placeholder="Strony" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                steps: `<input type="number" id="genInp" placeholder="Kroki" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                diet: `<input type="number" id="genKcal" placeholder="Kcal" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
+                       <input type="number" id="genProt" placeholder="Białko" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                measure: `<input type="number" step="0.1" id="genW" placeholder="Waga" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
+                          <input type="number" step="0.1" id="genF" placeholder="Fat%" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`
+            };
+
+            title.innerText = `Logowanie: ${type}`;
+            container.innerHTML = (inputs[type] || '') + `<button onclick="saveGeneric('${type}')" class="bg-indigo-600 text-white px-5 rounded-xl font-bold"><i class="fas fa-save"></i></button>`;
+
+            const historyCont = document.getElementById('genericHistory');
+            historyCont.innerHTML = Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).map(date => {
+                const val = map[date];
+                let display = "";
+                if (type === 'diet') display = `<b>${val.kcal}</b> kcal | <b>${val.prot}</b>g B`;
+                else if (type === 'measure') display = `<b>${val.w}</b> kg | <b>${val.f}</b>%`;
+                else display = `<b>${val}</b>`;
+
+                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm group">
+                    <div>
+                        <span class="text-[10px] font-black text-slate-300 uppercase block">${date.split('-').reverse().join('.')}</span>
+                        <span class="text-sm text-slate-700">${display}</span>
+                    </div>
+                    <button onclick="deleteLog('${type}', '${date}')" class="w-8 h-8 rounded-full bg-red-50 text-red-400 opacity-0 group-hover:opacity-100"><i class="fas fa-trash-alt text-xs"></i></button>
+                </div>`;
+            }).join('');
+        }
 
         // --- KALENDARZ ---
         let currentMonth = new Date();
         window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
         
         function renderCalendar() {
+            if (!state) return;
             const cont = document.getElementById('calendarDays');
-            if (!cont) return;
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
             const names = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
             document.getElementById('currentMonthYear').innerText = `${names[m]} ${y}`;
@@ -435,17 +445,17 @@
             const offset = first === 0 ? 6 : first - 1;
             for(let i=0; i<offset; i++) cont.innerHTML += '<div></div>';
             
-            const days = new Date(y, m+1, 0).getDate();
-            for(let d=1; d<=days; d++) {
+            const daysCount = new Date(y, m+1, 0).getDate();
+            for(let d=1; d<=daysCount; d++) {
                 const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const tasks = state.calendar[key] || [];
-                const done = tasks.filter(t => t.done).length;
+                const doneCount = tasks.filter(t => t.done).length;
                 const isToday = key === todayStr;
                 
                 cont.innerHTML += `
                     <div onclick="openModal('${key}')" class="h-16 border rounded-2xl flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all ${isToday ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100'}">
                         <span class="text-xs font-black">${d}</span>
-                        ${tasks.length ? `<span class="text-[8px] font-bold ${isToday?'text-indigo-200':'text-indigo-400'}">${done}/${tasks.length}</span>` : ''}
+                        ${tasks.length ? `<span class="text-[8px] font-bold ${isToday?'text-indigo-200':'text-indigo-400'}">${doneCount}/${tasks.length}</span>` : ''}
                     </div>`;
             }
         }
@@ -459,7 +469,6 @@
             document.getElementById('modal').classList.remove('hidden'); 
         };
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
-        
         window.addTaskToDay = () => {
             const val = document.getElementById('customTaskInput').value;
             if(val) {
@@ -469,7 +478,6 @@
                 document.getElementById('customTaskInput').value = '';
             }
         };
-
         window.addFromDB = (val) => {
             if(!val) return;
             if(!state.calendar[activeDateKey]) state.calendar[activeDateKey] = [];
@@ -477,7 +485,6 @@
             save();
             document.getElementById('modalDutySelect').value = "";
         };
-
         window.toggleTask = (i) => { state.calendar[activeDateKey][i].done = !state.calendar[activeDateKey][i].done; save(); };
         window.deleteTask = (i) => { state.calendar[activeDateKey].splice(i, 1); save(); };
         
@@ -498,8 +505,8 @@
             if(v) { state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; }
         };
 
-        // --- RENDER ALL ---
         function renderAll() {
+            if (!state) return;
             renderCalendar();
             if (activeView === 'workout') renderWorkout();
             if (['reading', 'steps', 'diet', 'measure'].includes(activeView)) renderGenericView(activeView);
@@ -511,8 +518,8 @@
             document.getElementById('progressText').innerText = p + '%';
             document.getElementById('todayDate').innerText = "Dzisiaj, " + new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
 
-            document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-white px-3 py-1.5 rounded-xl border border-slate-100 text-[9px] font-black text-indigo-500 uppercase shadow-sm">${d}</div>`).join('');
-            document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz szablon...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
+            document.getElementById('dutyDatabase').innerHTML = (state.dutyDB || []).map(d => `<div class="bg-white px-3 py-1.5 rounded-xl border border-slate-100 text-[9px] font-black text-indigo-500 uppercase shadow-sm">${d}</div>`).join('');
+            document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz szablon...</option>' + (state.dutyDB || []).map(d => `<option value="${d}">${d}</option>`).join('');
             
             if(!document.getElementById('modal').classList.contains('hidden')) renderModalTasks();
         }
