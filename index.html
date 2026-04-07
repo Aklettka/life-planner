@@ -28,9 +28,9 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h1 id="viewTitle" class="text-2xl font-bold">Planer</h1>
-                <p id="todayDate" class="text-indigo-200 text-sm font-medium">Ładowanie...</p>
+                <p id="todayDate" class="text-indigo-200 text-sm font-medium">Inicjalizacja...</p>
             </div>
-            <div id="connectionStatus" class="bg-amber-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest text-white shadow-lg">Łączenie...</div>
+            <div id="connectionStatus" class="bg-amber-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest text-white shadow-lg">Oczekiwanie...</div>
         </div>
         
         <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
@@ -153,10 +153,17 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // BEZPIECZNE POBIERANIE KONFIGURACJI
+        const getFirebaseConfig = () => {
+            try {
+                if (typeof __firebase_config !== 'undefined') {
+                    return JSON.parse(__firebase_config);
+                }
+            } catch (e) { console.error("Config parse error", e); }
+            return null;
+        };
+
+        const config = getFirebaseConfig();
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-planner-v1';
 
         const defaultState = {
@@ -180,57 +187,69 @@
         let activeView = 'dashboard';
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Inicjalizacja dat w polach input
+        // Inicjalizacja UI
         window.onload = () => {
             document.getElementById('workoutDateInput').value = todayStr;
             document.getElementById('genericDateInput').value = todayStr;
+            document.getElementById('todayDate').innerText = "Dzisiaj, " + new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
         };
 
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (e) { console.error("Auth error", e); }
-        };
-        initAuth();
+        if (config) {
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
 
-        onAuthStateChanged(auth, (u) => {
-            const statusBadge = document.getElementById('connectionStatus');
-            if (u) {
-                user = u;
-                statusBadge.innerText = 'Online';
-                statusBadge.classList.replace('bg-amber-500', 'bg-emerald-500');
-                
-                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
-                onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) {
-                        state = snap.data();
-                        // Upewnienie się że struktura workout jest poprawna
-                        if(!state.workout || !state.workout.plans) {
-                            state.workout = JSON.parse(JSON.stringify(defaultState.workout));
-                        }
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
-                        state = JSON.parse(JSON.stringify(defaultState));
-                        save();
+                        await signInAnonymously(auth);
                     }
-                    renderAll();
-                }, (err) => {
-                    console.error("Firestore Error:", err);
-                    statusBadge.innerText = 'Błąd Synchronizacji';
-                    statusBadge.classList.replace('bg-emerald-500', 'bg-red-500');
-                });
-            }
-        });
+                } catch (e) { 
+                    console.error("Auth error", e); 
+                    document.getElementById('connectionStatus').innerText = 'Błąd Auth';
+                }
+            };
+            initAuth();
 
-        async function save() {
-            if (!user || !state) return;
-            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+            onAuthStateChanged(auth, (u) => {
+                const statusBadge = document.getElementById('connectionStatus');
+                if (u) {
+                    user = u;
+                    statusBadge.innerText = 'Online';
+                    statusBadge.classList.replace('bg-amber-500', 'bg-emerald-500');
+                    
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+                    onSnapshot(docRef, (snap) => {
+                        if (snap.exists()) {
+                            state = snap.data();
+                            if(!state.workout || !state.workout.plans) {
+                                state.workout = JSON.parse(JSON.stringify(defaultState.workout));
+                            }
+                        } else {
+                            state = JSON.parse(JSON.stringify(defaultState));
+                            save(db);
+                        }
+                        renderAll();
+                    }, (err) => {
+                        console.error("Firestore Error:", err);
+                        statusBadge.innerText = 'Błąd Sync';
+                    });
+                }
+            });
+
+            window.save = async () => {
+                if (!user || !state) return;
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+                } catch(e) { console.error("Save error", e); }
+            };
+        } else {
+            document.getElementById('connectionStatus').innerText = 'Brak Config';
         }
 
-        // --- Widoki ---
+        // --- UI LOGIC ---
         window.switchView = (v) => {
             activeView = v;
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -250,8 +269,8 @@
             renderAll();
         };
 
-        // --- TRENING ---
-        window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; save(); };
+        // Treningowe funkcje pomocnicze
+        window.switchWorkoutPlan = (p) => { if(state){ state.workout.currentPlan = p; save(); } };
         window.addExercise = () => {
             const name = document.getElementById('exerciseInput').value;
             if (name && state) {
@@ -263,8 +282,7 @@
 
         window.saveWorkoutSession = () => {
             const date = document.getElementById('workoutDateInput').value;
-            if(!date) return alert("Wybierz datę!");
-            
+            if(!date || !state) return;
             const plan = state.workout.plans[state.workout.currentPlan];
             plan.exercises.forEach((ex, exIdx) => {
                 const sessionData = [];
@@ -276,7 +294,6 @@
                 ex.history[date] = sessionData;
             });
             save();
-            alert(`Trening z dnia ${date} zapisany!`);
         };
 
         window.changeSets = (idx, delta) => {
@@ -286,87 +303,13 @@
         };
 
         window.removeExercise = (idx) => {
-            if(confirm("Usunąć ćwiczenie z planu?")) {
+            if(confirm("Usunąć ćwiczenie?")) {
                 state.workout.plans[state.workout.currentPlan].exercises.splice(idx, 1);
                 save();
             }
         };
 
-        window.deleteWorkoutHistory = (exIdx, date) => {
-            if(confirm(`Usunąć historię z ${date}?`)) {
-                delete state.workout.plans[state.workout.currentPlan].exercises[exIdx].history[date];
-                save();
-            }
-        };
-
-        function renderWorkout() {
-            if (!state || !state.workout) return;
-            const cp = state.workout.currentPlan;
-            const plan = state.workout.plans[cp];
-            const exercises = plan.exercises || [];
-            const targetDate = document.getElementById('workoutDateInput').value || todayStr;
-
-            document.getElementById('btnPlan1').className = cp === 1 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
-            document.getElementById('btnPlan2').className = cp === 2 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
-
-            const allDates = new Set();
-            exercises.forEach(ex => Object.keys(ex.history || {}).forEach(d => { if(d !== targetDate) allDates.add(d) }));
-            const sortedDates = Array.from(allDates).sort((a,b) => new Date(b) - new Date(a));
-
-            const header = document.getElementById('workoutTableHeader');
-            header.innerHTML = `<th class="sticky-col bg-slate-50 text-[10px] font-black text-slate-400 uppercase">Ćwiczenie</th>`;
-            sortedDates.forEach(d => {
-                header.innerHTML += `<th class="text-center text-[10px] font-black text-slate-300 uppercase">${d.split('-').reverse().join('.')}</th>`;
-            });
-            header.innerHTML += `<th class="text-center bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">SESJA (${targetDate.split('-').reverse().join('.')})</th>`;
-
-            const tbody = document.getElementById('workoutTableBody');
-            if (exercises.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="100" class="p-10 text-center text-slate-300 italic text-sm">Brak ćwiczeń w tym planie. Dodaj pierwsze powyżej!</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = exercises.map((ex, exIdx) => {
-                const activeSession = (ex.history && ex.history[targetDate]) ? ex.history[targetDate] : Array(ex.sets).fill({w:'', r:''});
-                
-                let historyCols = sortedDates.map(d => {
-                    const hSession = ex.history[d] || [];
-                    return `<td class="text-center text-[10px] text-slate-400 align-top group relative">
-                        ${hSession.map(s => `<div>${s.w}x${s.r}</div>`).join('')}
-                        <button onclick="deleteWorkoutHistory(${exIdx}, '${d}')" class="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 text-red-300"><i class="fas fa-times"></i></button>
-                    </td>`;
-                }).join('');
-
-                let todayCol = `<td class="bg-indigo-50/40 p-2">
-                    <div class="space-y-1">
-                        ${Array.from({length: ex.sets}).map((_, sIdx) => {
-                            const sVal = activeSession[sIdx] || {w:'', r:''};
-                            return `<div class="flex gap-1 justify-center">
-                                <input id="w-${exIdx}-${sIdx}" type="number" value="${sVal.w}" placeholder="kg" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
-                                <span class="text-indigo-200">x</span>
-                                <input id="r-${exIdx}-${sIdx}" type="number" value="${sVal.r}" placeholder="powt" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </td>`;
-
-                return `<tr>
-                    <td class="sticky-col border-b bg-white">
-                        <div class="font-bold text-xs text-slate-700">${ex.name}</div>
-                        <div class="flex items-center gap-2 mt-2">
-                             <button onclick="changeSets(${exIdx}, -1)" class="text-slate-300 hover:text-indigo-500"><i class="fas fa-minus-circle"></i></button>
-                             <span class="text-[9px] font-black text-indigo-500 uppercase">${ex.sets} serii</span>
-                             <button onclick="changeSets(${exIdx}, 1)" class="text-slate-300 hover:text-indigo-500"><i class="fas fa-plus-circle"></i></button>
-                             <button onclick="removeExercise(${exIdx})" class="ml-auto text-red-200 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                    ${historyCols}
-                    ${todayCol}
-                </tr>`;
-            }).join('');
-        }
-
-        // --- GENERYCZNE ---
+        // Generics
         window.saveGeneric = (type) => {
             const date = document.getElementById('genericDateInput').value;
             if(!date || !state) return;
@@ -374,8 +317,7 @@
 
             if (type === 'reading' || type === 'steps') {
                 const v = parseInt(document.getElementById('genInp').value);
-                if(!v) return;
-                state[type][date] = (state[type][date] || 0) + v;
+                if(v) state[type][date] = (state[type][date] || 0) + v;
             } else if (type === 'diet') {
                 const k = parseInt(document.getElementById('genKcal').value) || 0;
                 const p = parseInt(document.getElementById('genProt').value) || 0;
@@ -389,78 +331,11 @@
             save();
         };
 
-        window.deleteLog = (type, date) => {
-            if(confirm("Usunąć?")) { delete state[type][date]; save(); }
-        };
-
-        function renderGenericView(type) {
-            if (!state) return;
-            const container = document.getElementById('genericInputContainer');
-            const title = document.getElementById('genericInputTitle');
-            const map = state[type] || {};
-            
-            const inputs = {
-                reading: `<input type="number" id="genInp" placeholder="Strony" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                steps: `<input type="number" id="genInp" placeholder="Kroki" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                diet: `<input type="number" id="genKcal" placeholder="Kcal" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
-                       <input type="number" id="genProt" placeholder="Białko" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
-                measure: `<input type="number" step="0.1" id="genW" placeholder="Waga" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">
-                          <input type="number" step="0.1" id="genF" placeholder="Fat%" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`
-            };
-
-            title.innerText = `Logowanie: ${type}`;
-            container.innerHTML = (inputs[type] || '') + `<button onclick="saveGeneric('${type}')" class="bg-indigo-600 text-white px-5 rounded-xl font-bold"><i class="fas fa-save"></i></button>`;
-
-            const historyCont = document.getElementById('genericHistory');
-            historyCont.innerHTML = Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).map(date => {
-                const val = map[date];
-                let display = "";
-                if (type === 'diet') display = `<b>${val.kcal}</b> kcal | <b>${val.prot}</b>g B`;
-                else if (type === 'measure') display = `<b>${val.w}</b> kg | <b>${val.f}</b>%`;
-                else display = `<b>${val}</b>`;
-
-                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm group">
-                    <div>
-                        <span class="text-[10px] font-black text-slate-300 uppercase block">${date.split('-').reverse().join('.')}</span>
-                        <span class="text-sm text-slate-700">${display}</span>
-                    </div>
-                    <button onclick="deleteLog('${type}', '${date}')" class="w-8 h-8 rounded-full bg-red-50 text-red-400 opacity-0 group-hover:opacity-100"><i class="fas fa-trash-alt text-xs"></i></button>
-                </div>`;
-            }).join('');
-        }
-
-        // --- KALENDARZ ---
+        // Calendar
         let currentMonth = new Date();
         window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
         
-        function renderCalendar() {
-            if (!state) return;
-            const cont = document.getElementById('calendarDays');
-            const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
-            const names = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
-            document.getElementById('currentMonthYear').innerText = `${names[m]} ${y}`;
-            cont.innerHTML = '';
-            
-            const first = new Date(y, m, 1).getDay();
-            const offset = first === 0 ? 6 : first - 1;
-            for(let i=0; i<offset; i++) cont.innerHTML += '<div></div>';
-            
-            const daysCount = new Date(y, m+1, 0).getDate();
-            for(let d=1; d<=daysCount; d++) {
-                const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const tasks = state.calendar[key] || [];
-                const doneCount = tasks.filter(t => t.done).length;
-                const isToday = key === todayStr;
-                
-                cont.innerHTML += `
-                    <div onclick="openModal('${key}')" class="h-16 border rounded-2xl flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all ${isToday ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100'}">
-                        <span class="text-xs font-black">${d}</span>
-                        ${tasks.length ? `<span class="text-[8px] font-bold ${isToday?'text-indigo-200':'text-indigo-400'}">${doneCount}/${tasks.length}</span>` : ''}
-                    </div>`;
-            }
-        }
-
-        // --- MODAL ---
+        // Modal
         let activeDateKey = null;
         window.openModal = (k) => { 
             activeDateKey = k; 
@@ -471,23 +346,110 @@
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
         window.addTaskToDay = () => {
             const val = document.getElementById('customTaskInput').value;
-            if(val) {
+            if(val && state) {
                 if(!state.calendar[activeDateKey]) state.calendar[activeDateKey] = [];
                 state.calendar[activeDateKey].push({title: val, done: false});
                 save();
                 document.getElementById('customTaskInput').value = '';
             }
         };
+        window.toggleTask = (i) => { state.calendar[activeDateKey][i].done = !state.calendar[activeDateKey][i].done; save(); };
+        window.deleteTask = (i) => { state.calendar[activeDateKey].splice(i, 1); save(); };
+        window.addToDatabase = () => {
+            const v = document.getElementById('dbInput').value;
+            if(v && state) { state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; }
+        };
         window.addFromDB = (val) => {
-            if(!val) return;
+            if(!val || !state) return;
             if(!state.calendar[activeDateKey]) state.calendar[activeDateKey] = [];
             state.calendar[activeDateKey].push({title: val, done: false});
             save();
             document.getElementById('modalDutySelect').value = "";
         };
-        window.toggleTask = (i) => { state.calendar[activeDateKey][i].done = !state.calendar[activeDateKey][i].done; save(); };
-        window.deleteTask = (i) => { state.calendar[activeDateKey].splice(i, 1); save(); };
-        
+
+        // --- RENDERS ---
+        function renderCalendar() {
+            if (!state) return;
+            const cont = document.getElementById('calendarDays');
+            const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+            const names = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+            document.getElementById('currentMonthYear').innerText = `${names[m]} ${y}`;
+            cont.innerHTML = '';
+            const first = new Date(y, m, 1).getDay();
+            const offset = first === 0 ? 6 : first - 1;
+            for(let i=0; i<offset; i++) cont.innerHTML += '<div></div>';
+            const daysCount = new Date(y, m+1, 0).getDate();
+            for(let d=1; d<=daysCount; d++) {
+                const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const tasks = state.calendar[key] || [];
+                const doneCount = tasks.filter(t => t.done).length;
+                const isToday = key === todayStr;
+                cont.innerHTML += `<div onclick="openModal('${key}')" class="h-16 border rounded-2xl flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all ${isToday ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100'}">
+                    <span class="text-xs font-black">${d}</span>
+                    ${tasks.length ? `<span class="text-[8px] font-bold ${isToday?'text-indigo-200':'text-indigo-400'}">${doneCount}/${tasks.length}</span>` : ''}
+                </div>`;
+            }
+        }
+
+        function renderWorkout() {
+            if (!state || !state.workout) return;
+            const cp = state.workout.currentPlan;
+            const exercises = state.workout.plans[cp].exercises || [];
+            const targetDate = document.getElementById('workoutDateInput').value || todayStr;
+
+            document.getElementById('btnPlan1').className = cp === 1 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
+            document.getElementById('btnPlan2').className = cp === 2 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
+
+            const allDates = new Set();
+            exercises.forEach(ex => Object.keys(ex.history || {}).forEach(d => { if(d !== targetDate) allDates.add(d) }));
+            const sortedDates = Array.from(allDates).sort((a,b) => new Date(b) - new Date(a)).slice(0, 3); // Ostatnie 3
+
+            const header = document.getElementById('workoutTableHeader');
+            header.innerHTML = `<th class="sticky-col bg-slate-50 text-[10px] font-black text-slate-400 uppercase">Ćwiczenie</th>`;
+            sortedDates.forEach(d => header.innerHTML += `<th class="text-center text-[10px] text-slate-300 uppercase">${d.split('-').slice(1).reverse().join('.')}</th>`);
+            header.innerHTML += `<th class="text-center bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">Sesja</th>`;
+
+            const tbody = document.getElementById('workoutTableBody');
+            tbody.innerHTML = exercises.map((ex, exIdx) => {
+                const activeSession = ex.history[targetDate] || Array(ex.sets).fill({w:'', r:''});
+                const historyCols = sortedDates.map(d => `<td class="text-center text-[10px] text-slate-400 align-top">${(ex.history[d] || []).map(s => `<div>${s.w}x${s.r}</div>`).join('')}</td>`).join('');
+                const todayCol = `<td class="bg-indigo-50/40 p-2"><div class="space-y-1">${Array.from({length: ex.sets}).map((_, sIdx) => {
+                    const val = activeSession[sIdx] || {w:'', r:''};
+                    return `<div class="flex gap-1 justify-center">
+                        <input id="w-${exIdx}-${sIdx}" type="number" value="${val.w}" placeholder="kg" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
+                        <input id="r-${exIdx}-${sIdx}" type="number" value="${val.r}" placeholder="powt" class="w-10 p-1 text-center rounded border border-indigo-100 text-[10px] outline-none">
+                    </div>`;
+                }).join('')}</div></td>`;
+
+                return `<tr><td class="sticky-col border-b bg-white"><div class="font-bold text-xs text-slate-700">${ex.name}</div><div class="flex items-center gap-2 mt-2">
+                    <button onclick="changeSets(${exIdx}, -1)" class="text-slate-300"><i class="fas fa-minus-circle"></i></button><span class="text-[9px] font-black text-indigo-500">${ex.sets}S</span>
+                    <button onclick="changeSets(${exIdx}, 1)" class="text-slate-300"><i class="fas fa-plus-circle"></i></button>
+                    <button onclick="removeExercise(${exIdx})" class="ml-auto text-red-200"><i class="fas fa-trash"></i></button></div></td>${historyCols}${todayCol}</tr>`;
+            }).join('');
+        }
+
+        function renderGenericView(type) {
+            if (!state) return;
+            const container = document.getElementById('genericInputContainer');
+            const map = state[type] || {};
+            const inputs = {
+                reading: `<input type="number" id="genInp" placeholder="Strony" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                steps: `<input type="number" id="genInp" placeholder="Kroki" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                diet: `<input type="number" id="genKcal" placeholder="Kcal" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none"><input type="number" id="genProt" placeholder="Białko" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`,
+                measure: `<input type="number" step="0.1" id="genW" placeholder="Waga" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none"><input type="number" step="0.1" id="genF" placeholder="Fat%" class="flex-1 bg-slate-100 rounded-xl p-3 text-sm font-bold outline-none">`
+            };
+            container.innerHTML = (inputs[type] || '') + `<button onclick="saveGeneric('${type}')" class="bg-indigo-600 text-white px-5 rounded-xl font-bold"><i class="fas fa-save"></i></button>`;
+            
+            document.getElementById('genericHistory').innerHTML = Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).map(date => {
+                const val = map[date];
+                let display = type === 'diet' ? `${val.kcal} kcal | ${val.prot}g B` : (type === 'measure' ? `${val.w} kg | ${val.f}%` : val);
+                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm">
+                    <div><span class="text-[10px] font-black text-slate-300 block">${date.split('-').reverse().join('.')}</span><span class="text-sm text-slate-700">${display}</span></div>
+                    <button onclick="deleteLog('${type}', '${date}')" class="text-red-200"><i class="fas fa-trash-alt"></i></button>
+                </div>`;
+            }).join('');
+        }
+
         function renderModalTasks() {
             const tasks = state.calendar[activeDateKey] || [];
             document.getElementById('selectedDayTasks').innerHTML = tasks.length ? tasks.map((t, i) => `
@@ -496,31 +458,22 @@
                         ${t.done?'<i class="fas fa-check text-[10px]"></i>':''}
                     </div>
                     <span class="flex-1 text-sm font-bold ${t.done?'line-through text-slate-300':'text-slate-700'}">${t.title}</span>
-                    <button onclick="deleteTask(${i})" class="text-slate-200 hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
+                    <button onclick="deleteTask(${i})" class="text-slate-200"><i class="fas fa-trash-alt"></i></button>
                 </div>`).join('') : '<p class="text-center text-slate-300 text-sm py-4 italic">Brak zadań</p>';
         }
-
-        window.addToDatabase = () => {
-            const v = document.getElementById('dbInput').value;
-            if(v) { state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; }
-        };
 
         function renderAll() {
             if (!state) return;
             renderCalendar();
             if (activeView === 'workout') renderWorkout();
             if (['reading', 'steps', 'diet', 'measure'].includes(activeView)) renderGenericView(activeView);
-            
             const tasks = state.calendar[todayStr] || [];
             const done = tasks.filter(t => t.done).length;
             const p = tasks.length ? Math.round((done/tasks.length)*100) : 0;
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('progressText').innerText = p + '%';
-            document.getElementById('todayDate').innerText = "Dzisiaj, " + new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
-
-            document.getElementById('dutyDatabase').innerHTML = (state.dutyDB || []).map(d => `<div class="bg-white px-3 py-1.5 rounded-xl border border-slate-100 text-[9px] font-black text-indigo-500 uppercase shadow-sm">${d}</div>`).join('');
-            document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz szablon...</option>' + (state.dutyDB || []).map(d => `<option value="${d}">${d}</option>`).join('');
-            
+            document.getElementById('dutyDatabase').innerHTML = (state.dutyDB || []).map(d => `<div class="bg-white px-3 py-1.5 rounded-xl border border-slate-100 text-[9px] font-black text-indigo-500 uppercase">${d}</div>`).join('');
+            document.getElementById('modalDutySelect').innerHTML = '<option value="">Szablon...</option>' + (state.dutyDB || []).map(d => `<option value="${d}">${d}</option>`).join('');
             if(!document.getElementById('modal').classList.contains('hidden')) renderModalTasks();
         }
     </script>
