@@ -202,40 +202,57 @@
             workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } }
         };
 
-        onAuthStateChanged(auth, async (u) => {
-            if (!u) {
-                try {
-                    await signInAnonymously(auth);
-                } catch (e) {
-                    console.error("Auth error:", e);
-                }
-            } else {
+        // Inicjalizacja autoryzacji
+        const initAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (e) {
+                console.error("Auth error:", e);
+                document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
+                document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
                 user = u;
                 document.getElementById('connectionStatus').innerText = 'Online';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
                 setupListener();
+            } else {
+                initAuth();
             }
         });
 
         function setupListener() {
+            if (!user) return;
             onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), (snap) => {
                 if (snap.exists()) {
                     state = { ...state, ...snap.data() };
                     renderAll();
                 }
-            }, (err) => console.error("Błąd Firestore:", err));
+            }, (err) => {
+                console.error("Błąd Firestore (sprawdź reguły):", err);
+                document.getElementById('connectionStatus').innerText = 'Błąd Uprawnień';
+                document.getElementById('connectionStatus').classList.replace('bg-emerald-500', 'bg-red-500');
+            });
         }
 
         async function save() {
             if (!user) return;
-            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+            } catch (e) {
+                console.error("Błąd zapisu:", e);
+            }
         }
 
         window.switchView = (v) => {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${v}`).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-view="${v}"]`).classList.add('active');
+            const activeBtn = document.querySelector(`[data-view="${v}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
             document.getElementById('viewTitle').innerText = v.charAt(0).toUpperCase() + v.slice(1);
         };
 
@@ -243,6 +260,7 @@
         window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
         function renderCalendar() {
             const cont = document.getElementById('calendarDays');
+            if (!cont) return;
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
             document.getElementById('currentMonthYear').innerText = `${m+1}.${y}`;
             cont.innerHTML = '';
@@ -330,7 +348,8 @@
         }
 
         function renderHistoryList(id, map, type, unit="") {
-            const cont = document.getElementById(id); cont.innerHTML = '';
+            const cont = document.getElementById(id); if (!cont) return;
+            cont.innerHTML = '';
             Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).forEach(d => {
                 const v = map[d];
                 let txt = type === 'diet' ? `${v.kcal} kcal | ${v.protein}g B` : type === 'measure' ? `${v.w} kg | ${v.f}%` : `${v} ${unit}`;
