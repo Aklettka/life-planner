@@ -3,66 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Planner Pro (Firebase)</title>
+    <title>Life Planner Pro - Advanced Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .view-section { display: none; }
         .view-section.active { display: block; }
-        .nav-btn.active { color: #4f46e5; }
+        .nav-btn.active { color: #4f46e5; border-top: 2px solid #4f46e5; }
         .nav-btn:not(.active) { color: #94a3b8; }
         .workout-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { border-collapse: separate; border-spacing: 0; }
-        th, td { white-space: nowrap; border-bottom: 1px solid #f1f5f9; }
+        th, td { white-space: nowrap; border-bottom: 1px solid #f1f5f9; padding: 12px 16px; }
         .sticky-col { position: sticky; left: 0; background: white; z-index: 20; border-right: 2px solid #f1f5f9; }
         ::-webkit-scrollbar { height: 6px; width: 4px; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-24">
 
-    <!-- Header -->
-    <header class="bg-indigo-700 text-white p-6 rounded-b-[2.5rem] shadow-xl mb-6 sticky top-0 z-30">
+    <!-- Header z Paskiem Postępu -->
+    <header class="bg-slate-900 text-white p-6 sticky top-0 z-30 shadow-2xl">
         <div class="flex justify-between items-center mb-4">
             <div>
-                <h1 id="viewTitle" class="text-2xl font-bold">Planer</h1>
-                <p id="todayDate" class="text-indigo-200 text-sm">Ładowanie...</p>
+                <h1 id="viewTitle" class="text-xl font-black uppercase tracking-tighter">Planer</h1>
+                <p id="todayDate" class="text-slate-400 text-[10px] font-mono"></p>
             </div>
-            <div id="connectionStatus" class="bg-amber-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest">Inicjalizacja...</div>
+            <div id="connectionStatus" class="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
         </div>
         
-        <div id="topProgressCard" class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs uppercase tracking-wider text-indigo-200 mb-1 font-semibold">Dzisiejsze postępy</p>
-            <div class="flex items-center gap-3">
-                <div class="flex-1 bg-white/20 h-2 rounded-full overflow-hidden">
-                    <div id="progressBar" class="bg-white h-full transition-all duration-500" style="width: 100%"></div>
-                </div>
-                <span id="progressText" class="text-sm font-bold text-white">100%</span>
+        <div class="bg-slate-800 p-3 rounded-xl">
+            <div class="flex justify-between text-[10px] mb-1 font-bold uppercase">
+                <span>Dzienny Cel</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                <div id="progressBar" class="bg-indigo-500 h-full transition-all duration-700" style="width: 0%"></div>
             </div>
         </div>
     </header>
 
-    <main class="px-4 max-w-lg mx-auto lg:max-w-4xl">
+    <main class="px-4 py-6 max-w-5xl mx-auto">
+        
         <!-- PLANER -->
         <section id="view-dashboard" class="view-section active space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+            <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 id="currentMonthYear" class="font-bold text-lg text-slate-800">Miesiąc Rok</h2>
+                    <h2 id="currentMonthYear" class="font-black text-slate-800 uppercase tracking-tight"></h2>
                     <div class="flex gap-2">
-                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-left text-slate-400"></i></button>
-                        <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-right text-slate-400"></i></button>
+                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-lg"><i class="fas fa-chevron-left text-slate-400"></i></button>
+                        <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-lg"><i class="fas fa-chevron-right text-slate-400"></i></button>
                     </div>
                 </div>
-                <div id="calendarDays" class="grid grid-cols-7 gap-1"></div>
+                <div id="calendarDays" class="grid grid-cols-7 gap-2"></div>
             </div>
 
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <h3 class="font-bold text-slate-800 mb-4">Baza Twoich zadań</h3>
+            <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                <h3 class="font-bold text-xs uppercase text-slate-400 mb-4">Baza Twoich zadań</h3>
                 <div class="flex gap-2 mb-4">
-                    <input type="text" id="dbInput" placeholder="Np. Pranie, Nauka..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
-                    <button onclick="addToDatabase()" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"><i class="fas fa-plus"></i></button>
+                    <input type="text" id="dbInput" placeholder="Szybkie zadanie..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-indigo-500 outline-none">
+                    <button onclick="addToDatabase()" class="bg-slate-900 text-white px-5 rounded-xl transition-transform active:scale-95"><i class="fas fa-plus"></i></button>
                 </div>
                 <div id="dutyDatabase" class="flex flex-wrap gap-2"></div>
             </div>
@@ -70,161 +73,237 @@
 
         <!-- TRENING -->
         <section id="view-workout" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <div class="flex gap-2 mb-6">
-                    <button onclick="switchWorkoutPlan(1)" id="btnPlan1" class="flex-1 py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg">Plan A</button>
-                    <button onclick="switchWorkoutPlan(2)" id="btnPlan2" class="flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100">Plan B</button>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl">
+                    <button onclick="switchWorkoutPlan(1)" id="btnPlan1" class="flex-1 py-2 rounded-lg font-bold text-xs transition-all">PLAN A</button>
+                    <button onclick="switchWorkoutPlan(2)" id="btnPlan2" class="flex-1 py-2 rounded-lg font-bold text-xs transition-all">PLAN B</button>
                 </div>
                 
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Data treningu</label>
-                    <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase block mb-1">Data sesji</label>
+                        <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="addExercise()" class="w-full bg-emerald-500 text-white py-2 rounded-lg font-bold text-xs"><i class="fas fa-plus mr-2"></i>DODAJ ĆWICZENIE</button>
+                    </div>
                 </div>
-
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="exerciseInput" placeholder="Nowe ćwiczenie" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
-                    <button onclick="addExercise()" class="bg-emerald-500 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
-                </div>
+                <input type="text" id="exerciseInput" placeholder="Nazwa nowego ćwiczenia..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4">
                 
-                <div class="workout-table-container">
+                <div class="workout-table-container border rounded-xl">
                     <table class="w-full text-left">
                         <thead class="bg-slate-50">
                             <tr id="workoutTableHead">
-                                <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie</th>
+                                <th class="sticky-col">ĆWICZENIE</th>
                             </tr>
                         </thead>
-                        <tbody id="workoutTableBody"></tbody>
+                        <tbody id="workoutTableBody" class="text-xs"></tbody>
                     </table>
                 </div>
-                <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję treningową</button>
+                <button onclick="saveWorkoutSession()" class="w-full mt-6 bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700">ZAPISZ SESJĘ I AKTUALIZUJ REKORDY</button>
             </div>
         </section>
 
         <!-- CZYTANIE -->
         <section id="view-reading" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">Co czytałeś?</h3>
-                <div class="space-y-3">
-                    <input type="text" id="readingBookInput" placeholder="Tytuł książki" class="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
-                    <div class="flex gap-2">
-                        <input type="number" id="readingPageInput" placeholder="Liczba stron" class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
-                        <button onclick="logReading()" class="bg-indigo-600 text-white px-6 rounded-2xl font-bold">Zapisz</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Logowanie stron -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Dzienny Postęp Stron</h3>
+                    <div class="space-y-3">
+                        <input type="number" id="readingPageInput" placeholder="Ile stron przeczytane?" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">
+                        <button onclick="logReading()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">ZAPISZ STRONY</button>
                     </div>
+                    <div id="readingHistory" class="mt-6 space-y-2 max-h-60 overflow-y-auto"></div>
+                </div>
+                <!-- Biblioteka -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Ukończone Książki</h3>
+                    <div class="space-y-3">
+                        <input type="text" id="libraryTitleInput" placeholder="Tytuł książki..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addToLibrary()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold">DODAJ DO PRZECZYTANYCH</button>
+                    </div>
+                    <div id="libraryList" class="mt-6 space-y-2 max-h-60 overflow-y-auto"></div>
                 </div>
             </div>
-            <div id="readingHistory" class="space-y-2"></div>
         </section>
 
-        <!-- STATYSTYKI -->
+        <!-- STATYSTYKI - ADVANCED ANALYTICS -->
         <section id="view-stats" class="view-section space-y-6">
-            <div id="statsContent" class="space-y-6">
-                <!-- Statystyki renderowane przez JS -->
-            </div>
-        </section>
-
-        <!-- DIETA -->
-        <section id="view-diet" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">Loguj kalorie i białko</h3>
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <input type="number" id="dietKcalInput" placeholder="Kcal" class="w-full bg-slate-50 border-none rounded-2xl p-3 text-sm font-bold">
-                    <input type="number" id="dietProteinInput" placeholder="Białko (g)" class="w-full bg-slate-50 border-none rounded-2xl p-3 text-sm font-bold">
+            <!-- Filtry analityczne -->
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">ANALYTICS ENGINE</h2>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Interaktywne zestawienie danych</p>
                 </div>
-                <button onclick="logDiet()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold">Dodaj posiłek</button>
+                <div class="flex gap-2">
+                    <select id="statsYearFilter" onchange="renderStats()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-xs font-bold"></select>
+                    <select id="statsMonthFilter" onchange="renderStats()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-xs font-bold">
+                        <option value="all">Cały rok</option>
+                        <option value="01">Styczeń</option><option value="02">Luty</option><option value="03">Marzec</option>
+                        <option value="04">Kwiecień</option><option value="05">Maj</option><option value="06">Czerwiec</option>
+                        <option value="07">Lipiec</option><option value="08">Sierpień</option><option value="09">Wrzesień</option>
+                        <option value="10">Październik</option><option value="11">Listopad</option><option value="12">Grudzień</option>
+                    </select>
+                </div>
             </div>
-            <div id="dietHistory" class="space-y-2"></div>
+
+            <!-- Grid statystyk -->
+            <div id="statsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Dynamiczne karty -->
+            </div>
+
+            <!-- Wykresy (Chart.js) -->
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h3 class="font-bold text-xs uppercase text-slate-400 mb-6">Trendy (Ostatnie 30 dni)</h3>
+                <canvas id="trendsChart" height="150"></canvas>
+            </div>
+
+            <!-- Tabele rekordów i surowe dane -->
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h3 class="font-bold text-xs uppercase text-slate-400 mb-4">Rekordy życiowe (PB) i max objętość</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[11px] text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th>ĆWICZENIE</th>
+                                <th>MAX CIĘŻAR (KG)</th>
+                                <th>MAX REPS</th>
+                                <th>DATA REKORDU</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsPBTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
-        <!-- KROKI -->
+        <!-- KROKI / DIETA / POMIARY (Uproszczone kontenery) -->
         <section id="view-steps" class="view-section space-y-6">
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 text-center">
-                <h3 class="text-4xl font-bold text-indigo-600 mb-2" id="currentStepsDisplay">0</h3>
-                <p class="text-xs text-slate-400 font-bold uppercase mb-6">Kroków dzisiaj</p>
-                <div class="flex gap-2">
-                    <input type="number" id="stepsInput" placeholder="Liczba kroków..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-4 text-center font-bold">
-                    <button onclick="logSteps()" class="bg-indigo-600 text-white px-8 rounded-2xl font-bold">OK</button>
+            <div class="bg-white rounded-[2rem] p-10 text-center border-2 border-slate-100">
+                <i class="fas fa-walking text-5xl text-indigo-500 mb-4"></i>
+                <h3 class="text-5xl font-black text-slate-900" id="currentStepsDisplay">0</h3>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">Kroków dzisiaj</p>
+                <div class="flex gap-2 max-w-sm mx-auto">
+                    <input type="number" id="stepsInput" placeholder="Wpisz wynik..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 text-center font-bold">
+                    <button onclick="logSteps()" class="bg-slate-900 text-white px-8 rounded-xl font-bold">ZATWIERDŹ</button>
                 </div>
             </div>
             <div id="stepsHistory" class="space-y-2"></div>
         </section>
 
-        <!-- POMIARY -->
-        <section id="view-measure" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4 text-center">Skład ciała</h3>
-                <div class="grid grid-cols-3 gap-2 mb-4">
-                    <input type="number" step="0.1" id="weightInput" placeholder="Waga" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
-                    <input type="number" step="0.1" id="fatInput" placeholder="Tłuszcz %" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
-                    <input type="number" step="0.1" id="muscleInput" placeholder="Mięśnie kg" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
+        <section id="view-diet" class="view-section space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 text-xs uppercase">Dzienny bilans</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <input type="number" id="dietKcalInput" placeholder="Kalorie (kcal)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold">
+                    <input type="number" id="dietProteinInput" placeholder="Białko (g)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold">
                 </div>
-                <button onclick="logMeasure()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold">Zapisz pomiar</button>
+                <button onclick="logDiet()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">DODAJ POSIŁEK</button>
+            </div>
+            <div id="dietHistory" class="space-y-2"></div>
+        </section>
+
+        <section id="view-measure" class="view-section space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-6 text-center text-xs uppercase">Analiza Składu Ciała</h3>
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase">Waga (kg)</label>
+                        <input type="number" step="0.1" id="weightInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-center text-sm font-black">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase">Tłuszcz (%)</label>
+                        <input type="number" step="0.1" id="fatInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-center text-sm font-black text-red-500">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase">Mięśnie (kg)</label>
+                        <input type="number" step="0.1" id="muscleInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-center text-sm font-black text-emerald-500">
+                    </div>
+                </div>
+                <button onclick="logMeasure()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-bold">ZAPISZ POMIAR</button>
             </div>
             <div id="measureHistory" class="space-y-2"></div>
         </section>
+
     </main>
 
     <!-- Nawigacja Dolna -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t px-2 py-3 flex justify-around items-center z-40">
-        <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1" data-view="dashboard"><i class="fas fa-calendar-check text-xs"></i><span class="text-[7px] font-bold">PLANER</span></button>
-        <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1" data-view="workout"><i class="fas fa-dumbbell text-xs"></i><span class="text-[7px] font-bold">TRENING</span></button>
-        <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1" data-view="reading"><i class="fas fa-book text-xs"></i><span class="text-[7px] font-bold">CZYTANIE</span></button>
-        <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1" data-view="stats"><i class="fas fa-chart-line text-xs"></i><span class="text-[7px] font-bold">STATS</span></button>
-        <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1" data-view="steps"><i class="fas fa-shoe-prints text-xs"></i><span class="text-[7px] font-bold">KROKI</span></button>
-        <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center gap-1" data-view="diet"><i class="fas fa-apple-alt text-xs"></i><span class="text-[7px] font-bold">DIETA</span></button>
-        <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center gap-1" data-view="measure"><i class="fas fa-weight text-xs"></i><span class="text-[7px] font-bold">POMIARY</span></button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t px-2 py-3 flex justify-around items-center z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1 flex-1" data-view="dashboard"><i class="fas fa-calendar-alt text-lg"></i><span class="text-[8px] font-bold">PLANER</span></button>
+        <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="workout"><i class="fas fa-dumbbell text-lg"></i><span class="text-[8px] font-bold">TRENING</span></button>
+        <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="reading"><i class="fas fa-book-open text-lg"></i><span class="text-[8px] font-bold">CZYTANIE</span></button>
+        <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="stats"><i class="fas fa-chart-bar text-lg"></i><span class="text-[8px] font-bold">STATS</span></button>
+        <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="steps"><i class="fas fa-shoe-prints text-lg"></i><span class="text-[8px] font-bold">KROKI</span></button>
+        <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="diet"><i class="fas fa-utensils text-lg"></i><span class="text-[8px] font-bold">DIETA</span></button>
+        <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="measure"><i class="fas fa-weight text-lg"></i><span class="text-[8px] font-bold">POMIARY</span></button>
     </nav>
 
     <!-- Modal Zadań -->
-    <div id="modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end justify-center z-50 p-4">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm">
-            <h3 id="modalDateDisplay" class="font-bold text-xl mb-4 text-indigo-600"></h3>
-            <div id="selectedDayTasks" class="space-y-2 mb-6 max-h-48 overflow-y-auto"></div>
-            <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-slate-50 border-none rounded-xl p-3 mb-2 text-sm">
-                <option value="">Wybierz z bazy...</option>
-            </select>
-            <input type="text" id="customTaskInput" placeholder="Lub wpisz własne..." class="w-full bg-slate-50 border-none rounded-xl p-3 mb-4 text-sm">
-            <div class="flex gap-3">
-                <button onclick="closeModal()" class="flex-1 py-4 font-bold text-slate-400">Zamknij</button>
-                <button onclick="addTaskToDay()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold">Dodaj</button>
+    <div id="modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 id="modalDateDisplay" class="font-black text-2xl text-slate-900 tracking-tighter italic uppercase"></h3>
+                    <p class="text-[10px] font-bold text-slate-400">ZARZĄDZANIE ZADANIAMI</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-300 hover:text-slate-900"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="selectedDayTasks" class="space-y-3 mb-8 max-h-[40vh] overflow-y-auto pr-2"></div>
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-white border border-slate-200 rounded-xl p-3 mb-3 text-sm font-bold">
+                    <option value="">Wybierz z Twojej bazy...</option>
+                </select>
+                <div class="flex gap-2">
+                    <input type="text" id="customTaskInput" placeholder="Nowe zadanie..." class="flex-1 bg-white border border-slate-200 rounded-xl p-3 text-sm">
+                    <button onclick="addTaskToDay()" class="bg-indigo-600 text-white px-5 rounded-xl"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyC_3bNv1sAE2Mz1Q2azqgBbyFF9Lg7wpgg",
-          authDomain: "life-planer-95ec9.firebaseapp.com",
-          projectId: "life-planer-95ec9",
-          storageBucket: "life-planer-95ec9.firebasestorage.app",
-          messagingSenderId: "495701836746",
-          appId: "1:495701836746:web:9e004c30e51a476683c533",
-          measurementId: "G-MH0H6TG2VJ"
-        };
-
+        const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = 'life-planner-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-planner-v2-advanced';
 
         let user = null;
         let state = {
-            dutyDB: [], calendar: {}, reading: { logs: {} }, steps: {},
-            diet: { logs: {} }, measure: {}, 
-            workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } }
+            dutyDB: [], 
+            calendar: {}, 
+            reading: { logs: {}, library: [] }, 
+            steps: {},
+            diet: { logs: {} }, 
+            measure: {}, 
+            workout: { 
+                currentPlan: 1, 
+                plans: { 
+                    1: { exercises: [] }, 
+                    2: { exercises: [] } 
+                } 
+            }
         };
+
+        const initAuth = async () => {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            await signInAnonymously(auth);
+          }
+        };
+        initAuth();
 
         onAuthStateChanged(auth, (u) => {
             if (u) {
                 user = u;
-                document.getElementById('connectionStatus').innerText = 'Online';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
                 setupListener();
-            } else {
-                signInAnonymously(auth);
             }
         });
 
@@ -235,25 +314,33 @@
                     state = { ...state, ...snap.data() };
                     renderAll();
                 }
-            });
+            }, (err) => console.error("Firestore Error:", err));
         }
 
         async function save() {
             if (!user) return;
-            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
+            } catch (e) { console.error("Save failed:", e); }
         }
 
+        // NAVIGATION
         window.switchView = (v) => {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${v}`).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             const activeBtn = document.querySelector(`[data-view="${v}"]`);
             if (activeBtn) activeBtn.classList.add('active');
-            document.getElementById('viewTitle').innerText = v.charAt(0).toUpperCase() + v.slice(1);
-            if(v === 'stats') renderStats();
+            document.getElementById('viewTitle').innerText = v === 'dashboard' ? 'Planer' : v.toUpperCase();
+            
+            if(v === 'stats') {
+                populateYearFilter();
+                renderStats();
+            }
             if(v === 'workout') renderWorkout();
         };
 
+        // CALENDAR & TASKS
         let currentMonth = new Date();
         window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
         
@@ -261,7 +348,8 @@
             const cont = document.getElementById('calendarDays');
             if (!cont) return;
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
-            document.getElementById('currentMonthYear').innerText = `${m+1}.${y}`;
+            const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+            document.getElementById('currentMonthYear').innerText = `${monthNames[m]} ${y}`;
             cont.innerHTML = '';
             const first = new Date(y, m, 1).getDay();
             const offset = first === 0 ? 6 : first - 1;
@@ -270,7 +358,17 @@
                 const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const t = state.calendar[key] || [];
                 const isToday = key === new Date().toISOString().split('T')[0];
-                cont.innerHTML += `<div onclick="openModal('${key}')" class="h-12 border rounded-xl flex flex-col items-center justify-center cursor-pointer ${isToday ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-100'}"><span class="text-[10px] font-bold ${t.length ? 'text-indigo-600' : 'text-slate-400'}">${d}</span><div class="flex gap-0.5 mt-1">${t.map(x => `<div class="w-1 h-1 rounded-full ${x.done?'bg-emerald-400':'bg-indigo-300'}"></div>`).slice(0,3).join('')}</div></div>`;
+                const doneCount = t.filter(x => x.done).length;
+                const isAllDone = t.length > 0 && doneCount === t.length;
+
+                cont.innerHTML += `
+                    <div onclick="openModal('${key}')" class="h-16 border rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 ${isToday ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-100'}">
+                        <span class="text-xs font-black ${t.length ? (isAllDone ? 'text-emerald-500' : 'text-indigo-600') : 'text-slate-300'}">${d}</span>
+                        <div class="flex gap-0.5 mt-1">
+                            ${t.slice(0, 4).map(x => `<div class="w-1 h-1 rounded-full ${x.done?'bg-emerald-400':'bg-slate-300'}"></div>`).join('')}
+                            ${t.length > 4 ? '<div class="w-1 h-1 bg-slate-400 rounded-full"></div>' : ''}
+                        </div>
+                    </div>`;
             }
         }
 
@@ -295,6 +393,7 @@
             state.calendar[activeDateKey].push({title: val, done: false});
             save();
             renderModalTasks();
+            document.getElementById('modalDutySelect').value = "";
         };
 
         window.toggleTask = (i) => { state.calendar[activeDateKey][i].done = !state.calendar[activeDateKey][i].done; save(); renderModalTasks(); };
@@ -302,13 +401,20 @@
         
         function renderModalTasks() {
             const tasks = state.calendar[activeDateKey] || [];
-            document.getElementById('selectedDayTasks').innerHTML = tasks.map((t, i) => `<div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-xs"><div onclick="toggleTask(${i})" class="w-5 h-5 flex items-center justify-center rounded border cursor-pointer ${t.done?'bg-emerald-500 border-emerald-500 text-white':''}">${t.done?'✓':''}</div><span class="flex-1 ${t.done?'line-through opacity-50':''}">${t.title}</span><button onclick="deleteTask(${i})" class="text-red-400 px-2"><i class="fas fa-trash"></i></button></div>`).join('');
+            document.getElementById('selectedDayTasks').innerHTML = tasks.map((t, i) => `
+                <div class="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 transition-all ${t.done ? 'opacity-50' : ''}">
+                    <div onclick="toggleTask(${i})" class="w-6 h-6 flex items-center justify-center rounded-lg border-2 cursor-pointer transition-colors ${t.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 hover:border-indigo-500'}">
+                        ${t.done ? '<i class="fas fa-check text-xs"></i>' : ''}
+                    </div>
+                    <span class="flex-1 text-sm font-bold ${t.done ? 'line-through' : 'text-slate-700'}">${t.title}</span>
+                    <button onclick="deleteTask(${i})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                </div>`).join('');
         }
 
         window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; } };
 
+        // WORKOUT
         window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; renderWorkout(); };
-        
         window.addExercise = () => {
             const n = document.getElementById('exerciseInput').value;
             if(n) {
@@ -327,7 +433,7 @@
                 for(let s=0; s<5; s++) {
                     const w = document.getElementById(`weight-${i}-${s}`)?.value || "";
                     const r = document.getElementById(`reps-${i}-${s}`)?.value || "";
-                    if(w || r) sets.push({w, r});
+                    if(w || r) sets.push({w: parseFloat(w)||0, r: parseInt(r)||0});
                 }
                 if(sets.length > 0) ex.history[date] = sets;
             });
@@ -337,93 +443,217 @@
 
         function renderWorkout() {
             const cp = state.workout.currentPlan;
+            const btn1 = document.getElementById('btnPlan1'), btn2 = document.getElementById('btnPlan2');
+            if(cp === 1) { btn1.className = "flex-1 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-md"; btn2.className = "flex-1 py-2 rounded-lg font-bold text-xs bg-transparent text-slate-400"; }
+            else { btn2.className = "flex-1 py-2 rounded-lg font-bold text-xs bg-indigo-600 text-white shadow-md"; btn1.className = "flex-1 py-2 rounded-lg font-bold text-xs bg-transparent text-slate-400"; }
+
             const exercises = state.workout.plans[cp].exercises;
             const selDate = document.getElementById('workoutDateInput').value || new Date().toISOString().split('T')[0];
 
             let dates = new Set();
             exercises.forEach(ex => Object.keys(ex.history).forEach(d => dates.add(d)));
             dates.add(selDate);
-            const sortedDates = Array.from(dates).sort((a,b) => new Date(b) - new Date(a));
+            const sortedDates = Array.from(dates).sort((a,b) => new Date(b) - new Date(a)).slice(0, 4);
 
             const head = document.getElementById('workoutTableHead');
-            head.innerHTML = `<th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie</th>`;
+            head.innerHTML = `<th class="sticky-col bg-slate-50">ĆWICZENIE</th>`;
             sortedDates.forEach(d => {
-                head.innerHTML += `<th class="p-3 text-[10px] font-bold text-slate-400 border-l">${d === selDate ? 'DZIŚ/WYBRANA' : d}</th>`;
+                const isSelected = d === selDate;
+                head.innerHTML += `<th class="text-[10px] ${isSelected ? 'text-indigo-600 font-black' : 'text-slate-400'}">${isSelected ? 'ZAPIS (WYBRANA)' : d}</th>`;
             });
 
             const body = document.getElementById('workoutTableBody');
             body.innerHTML = exercises.map((ex, i) => {
-                let row = `<tr><td class="p-3 text-xs font-bold sticky-col border-b">${ex.name}</td>`;
+                let row = `<tr class="hover:bg-slate-50/50"><td class="sticky-col font-black text-slate-700 border-b">${ex.name}</td>`;
                 sortedDates.forEach(date => {
                     const isSelected = date === selDate;
                     const h = ex.history[date] || [];
                     let cellContent = "";
                     if (isSelected) {
-                        cellContent = `<div class="space-y-1">` + [0,1,2,3,4].map(s => `
+                        cellContent = `<div class="flex flex-col gap-1">` + [0,1,2,3].map(s => `
                             <div class="flex gap-1 items-center">
-                                <span class="text-[8px] text-slate-300 w-2">${s+1}</span>
-                                <input id="weight-${i}-${s}" type="number" value="${h[s]?.w || ''}" placeholder="kg" class="w-10 p-1 text-[9px] rounded border">
-                                <input id="reps-${i}-${s}" type="number" value="${h[s]?.r || ''}" placeholder="r" class="w-10 p-1 text-[9px] rounded border">
+                                <span class="text-[8px] text-slate-300 w-2 font-mono">${s+1}</span>
+                                <input id="weight-${i}-${s}" type="number" step="0.1" value="${h[s]?.w || ''}" placeholder="kg" class="w-12 p-1 text-[10px] rounded border border-slate-200 outline-none focus:border-indigo-500">
+                                <input id="reps-${i}-${s}" type="number" value="${h[s]?.r || ''}" placeholder="r" class="w-10 p-1 text-[10px] rounded border border-slate-200 outline-none focus:border-indigo-500">
                             </div>`).join('') + `</div>`;
                     } else {
-                        cellContent = `<div class="text-[9px] text-slate-500">` + h.map((s, idx) => `<div>${idx+1}. ${s.w}kg x ${s.r}</div>`).join('') + `</div>`;
+                        cellContent = `<div class="flex flex-wrap gap-1">` + h.map(s => `<span class="bg-slate-100 px-1.5 py-0.5 rounded-md text-slate-500 font-mono">${s.w}<span class="text-[8px] mx-0.5">kg</span>x${s.r}</span>`).join('') + `</div>`;
                     }
-                    row += `<td class="p-2 border-b border-l align-top">${cellContent}</td>`;
+                    row += `<td class="border-b border-l align-top">${cellContent}</td>`;
                 });
                 row += `</tr>`;
                 return row;
             }).join('');
         }
 
+        // READING
         window.logReading = () => { 
-            const pages = parseInt(document.getElementById('readingPageInput').value); 
-            const book = document.getElementById('readingBookInput').value || "Nieznana książka";
-            if(pages){ 
+            const p = parseInt(document.getElementById('readingPageInput').value); 
+            if(p){ 
                 const d = new Date().toISOString().split('T')[0]; 
-                if(!state.reading.logs[d]) state.reading.logs[d] = [];
-                if(!Array.isArray(state.reading.logs[d])) state.reading.logs[d] = []; // fallback dla starego formatu
-                state.reading.logs[d].push({book, pages});
+                state.reading.logs[d] = (state.reading.logs[d] || 0) + p;
                 save(); 
                 document.getElementById('readingPageInput').value = ''; 
-                document.getElementById('readingBookInput').value = '';
             } 
         };
+        window.addToLibrary = () => {
+            const t = document.getElementById('libraryTitleInput').value;
+            if(t) {
+                state.reading.library.push({title: t, date: new Date().toISOString().split('T')[0]});
+                save();
+                document.getElementById('libraryTitleInput').value = '';
+            }
+        };
 
-        window.logDiet = () => { const k = parseInt(document.getElementById('dietKcalInput').value) || 0; const p = parseInt(document.getElementById('dietProteinInput').value) || 0; const d = new Date().toISOString().split('T')[0]; if(!state.diet.logs[d]) state.diet.logs[d] = {kcal:0, protein:0}; state.diet.logs[d].kcal += k; state.diet.logs[d].protein += p; save(); document.getElementById('dietKcalInput').value = ''; document.getElementById('dietProteinInput').value = ''; };
+        // STEPS / DIET / MEASURE
         window.logSteps = () => { const v = parseInt(document.getElementById('stepsInput').value); if(v){ state.steps[new Date().toISOString().split('T')[0]] = v; save(); document.getElementById('stepsInput').value = ''; } };
+        window.logDiet = () => { const k = parseInt(document.getElementById('dietKcalInput').value) || 0; const p = parseInt(document.getElementById('dietProteinInput').value) || 0; const d = new Date().toISOString().split('T')[0]; if(!state.diet.logs[d]) state.diet.logs[d] = {kcal:0, protein:0}; state.diet.logs[d].kcal += k; state.diet.logs[d].protein += p; save(); document.getElementById('dietKcalInput').value = ''; document.getElementById('dietProteinInput').value = ''; };
         window.logMeasure = () => { 
             const w = document.getElementById('weightInput').value; 
             const f = document.getElementById('fatInput').value; 
             const m = document.getElementById('muscleInput').value;
-            if(w){ 
-                state.measure[new Date().toISOString().split('T')[0]] = {w, f, m}; 
-                save(); 
-                document.getElementById('weightInput').value = ''; 
-                document.getElementById('fatInput').value = ''; 
-                document.getElementById('muscleInput').value = '';
-            } 
+            if(w){ state.measure[new Date().toISOString().split('T')[0]] = {w, f, m}; save(); } 
         };
 
-        window.deleteLog = (type, date) => {
-            delete state[type === 'reading' || type === 'diet' ? type : type][type === 'reading' || type === 'diet' ? 'logs' : date];
-            // Uproszczone usuwanie dla czytelności:
-            if(type === 'reading') delete state.reading.logs[date];
-            if(type === 'diet') delete state.diet.logs[date];
-            if(type === 'steps') delete state.steps[date];
-            if(type === 'measure') delete state.measure[date];
+        window.deleteLog = (type, key, isLibrary = false) => {
+            if(isLibrary) state.reading.library.splice(key, 1);
+            else if(type === 'reading') delete state.reading.logs[key];
+            else if(type === 'diet') delete state.diet.logs[key];
+            else if(type === 'steps') delete state.steps[key];
+            else if(type === 'measure') delete state.measure[key];
             save();
         };
+
+        // ADVANCED ANALYTICS ENGINE
+        function populateYearFilter() {
+            const filter = document.getElementById('statsYearFilter');
+            const years = new Set([new Date().getFullYear().toString()]);
+            Object.keys(state.steps).forEach(d => years.add(d.split('-')[0]));
+            Object.keys(state.reading.logs).forEach(d => years.add(d.split('-')[0]));
+            filter.innerHTML = Array.from(years).sort().map(y => `<option value="${y}">${y}</option>`).join('');
+        }
+
+        window.renderStats = () => {
+            const year = document.getElementById('statsYearFilter').value;
+            const month = document.getElementById('statsMonthFilter').value;
+            
+            // FILTR DANYCH
+            const filterData = (obj) => {
+                return Object.entries(obj).filter(([date]) => {
+                    const [y, m] = date.split('-');
+                    return y === year && (month === 'all' || m === month);
+                });
+            };
+
+            const filteredReading = filterData(state.reading.logs);
+            const filteredSteps = filterData(state.steps);
+            const filteredDiet = filterData(state.diet.logs);
+            const filteredMeasure = filterData(state.measure);
+
+            // OBLICZENIA
+            const totalPages = filteredReading.reduce((sum, [_, v]) => sum + v, 0);
+            const totalSteps = filteredSteps.reduce((sum, [_, v]) => sum + v, 0);
+            const avgKcal = filteredDiet.length ? Math.round(filteredDiet.reduce((sum, [_, v]) => sum + v.kcal, 0) / filteredDiet.length) : 0;
+            
+            // PB Table
+            let pbs = {};
+            [1, 2].forEach(pId => {
+                state.workout.plans[pId].exercises.forEach(ex => {
+                    Object.entries(ex.history).forEach(([date, sets]) => {
+                        sets.forEach(s => {
+                            if(!pbs[ex.name] || s.w > pbs[ex.name].w) pbs[ex.name] = {w: s.w, r: s.r, d: date};
+                        });
+                    });
+                });
+            });
+
+            // RENDER GRID
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Suma Stron</p>
+                    <p class="text-3xl font-black text-indigo-600">${totalPages}</p>
+                    <p class="text-[9px] mt-2 text-slate-400">Śr. dziennie: ${filteredReading.length ? (totalPages/filteredReading.length).toFixed(1) : 0}</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Suma Kroków</p>
+                    <p class="text-3xl font-black text-emerald-600">${totalSteps.toLocaleString()}</p>
+                    <p class="text-[9px] mt-2 text-slate-400">Dystans: ~${(totalSteps * 0.0007).toFixed(1)} km</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border-2 border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Średnie Kalorie</p>
+                    <p class="text-3xl font-black text-slate-900">${avgKcal} kcal</p>
+                    <p class="text-[9px] mt-2 text-slate-400">Dni w logu: ${filteredDiet.length}</p>
+                </div>
+            `;
+
+            document.getElementById('statsPBTableBody').innerHTML = Object.entries(pbs).map(([name, data]) => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="font-black text-slate-700">${name}</td>
+                    <td class="text-indigo-600 font-black">${data.w}</td>
+                    <td>${data.r}</td>
+                    <td class="text-slate-400 font-mono">${data.d}</td>
+                </tr>
+            `).join('');
+
+            renderTrendsChart(filteredSteps);
+        };
+
+        let myChart = null;
+        function renderTrendsChart(stepsData) {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            const last30 = stepsData.slice(-30);
+            
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last30.map(d => d[0].slice(5)),
+                    datasets: [{
+                        label: 'Kroki',
+                        data: last30.map(d => d[1]),
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                    }
+                }
+            });
+        }
 
         function renderAll() {
             renderCalendar();
             renderWorkout();
-            document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-white px-3 py-1 rounded-full border text-[10px] font-bold text-slate-500">${d}</div>`).join('');
-            document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz z bazy...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
+            document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-slate-100 px-3 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 uppercase tracking-tighter italic">${d}</div>`).join('');
+            document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz z Twojej bazy...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
+            
             renderHistoryList('readingHistory', state.reading.logs, 'reading', 'stron');
+            renderLibrary();
             renderHistoryList('dietHistory', state.diet.logs, 'diet');
             renderHistoryList('stepsHistory', state.steps, 'steps', 'kroków');
             renderHistoryList('measureHistory', state.measure, 'measure');
             updateProgress();
+        }
+
+        function renderLibrary() {
+            const cont = document.getElementById('libraryList');
+            cont.innerHTML = state.reading.library.map((b, i) => `
+                <div class="bg-slate-900 text-white p-3 rounded-xl flex justify-between items-center text-[10px] font-bold">
+                    <span><i class="fas fa-check-circle text-emerald-400 mr-2"></i>${b.title}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="opacity-40 font-mono">${b.date}</span>
+                        <button onclick="deleteLog('reading', ${i}, true)" class="text-slate-500 hover:text-white"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>`).join('');
         }
 
         function renderHistoryList(id, map, type, unit="") {
@@ -432,90 +662,31 @@
             Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).forEach(d => {
                 const v = map[d];
                 let txt = "";
-                if(type === 'reading') {
-                    txt = Array.isArray(v) ? v.map(i => `${i.book}: ${i.pages} str.`).join(', ') : `${v} str.`;
-                } else if(type === 'diet') {
-                    txt = `${v.kcal} kcal | ${v.protein}g B`;
-                } else if(type === 'measure') {
-                    txt = `${v.w}kg | ${v.f || '?'}% Tł. | ${v.m || '?'}kg Mięś.`;
-                } else {
-                    txt = `${v} ${unit}`;
-                }
-                cont.innerHTML += `<div class="bg-white p-3 rounded-2xl border flex justify-between items-center text-[10px]"><div><b>${d}</b> <span class="ml-2 text-indigo-600">${txt}</span></div><button onclick="deleteLog('${type}', '${d}')" class="text-slate-200 hover:text-red-400 p-1"><i class="fas fa-trash"></i></button></div>`;
-            });
-        }
-
-        function renderStats() {
-            const sc = document.getElementById('statsContent');
-            
-            // 1. Analiza Czytania
-            let readingStats = {};
-            Object.entries(state.reading.logs).forEach(([date, data]) => {
-                const year = date.split('-')[0];
-                const month = date.split('-')[0] + '-' + date.split('-')[1];
-                const pages = Array.isArray(data) ? data.reduce((sum, i) => sum + i.pages, 0) : data;
-                readingStats[year] = (readingStats[year] || 0) + pages;
-            });
-
-            // 2. Analiza Kroków
-            let stepStats = {};
-            Object.entries(state.steps).forEach(([date, val]) => {
-                const year = date.split('-')[0];
-                stepStats[year] = (stepStats[year] || 0) + val;
-            });
-
-            // 3. Rekordy (Personal Bests)
-            let pbStats = [];
-            [1, 2].forEach(pId => {
-                state.workout.plans[pId].exercises.forEach(ex => {
-                    let maxWeight = 0;
-                    Object.values(ex.history).forEach(sets => {
-                        sets.forEach(s => {
-                            if(parseFloat(s.w) > maxWeight) maxWeight = parseFloat(s.w);
-                        });
-                    });
-                    if(maxWeight > 0) pbStats.push({name: ex.name, weight: maxWeight});
-                });
-            });
-
-            sc.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-book text-indigo-500"></i> Czytanie (Strony)</h3>
-                    ${Object.entries(readingStats).map(([y, v]) => `<div class="flex justify-between text-sm mb-1"><span>Rok ${y}</span><span class="font-bold">${v}</span></div>`).join('') || '<p class="text-xs text-slate-400">Brak danych</p>'}
-                </div>
+                if(type === 'reading') txt = `${v} ${unit}`;
+                else if(type === 'diet') txt = `${v.kcal} kcal | ${v.protein}g B`;
+                else if(type === 'measure') txt = `${v.w}kg | Tł: ${v.f}% | Mięś: ${v.m}kg`;
+                else txt = `${v.toLocaleString()} ${unit}`;
                 
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-shoe-prints text-emerald-500"></i> Kroki (Suma)</h3>
-                    ${Object.entries(stepStats).map(([y, v]) => `<div class="flex justify-between text-sm mb-1"><span>Rok ${y}</span><span class="font-bold">${v.toLocaleString()}</span></div>`).join('') || '<p class="text-xs text-slate-400">Brak danych</p>'}
-                </div>
-
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-trophy text-amber-500"></i> Rekordy Siłowe</h3>
-                    ${pbStats.map(pb => `<div class="flex justify-between text-sm mb-1"><span>${pb.name}</span><span class="font-bold text-indigo-600">${pb.weight} kg</span></div>`).join('') || '<p class="text-xs text-slate-400">Brak rekordów</p>'}
-                </div>
-
-                <div class="bg-indigo-600 rounded-3xl p-6 shadow-lg text-white">
-                    <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-magic"></i> Szybkie Fakty</h3>
-                    <p class="text-xs opacity-80 leading-relaxed">System przeanalizował Twoje dane. Twój najbardziej aktywny rok to dotychczas ${Object.keys(stepStats)[0] || '?'}. Gratulacje!</p>
-                </div>
-            `;
+                cont.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center text-[10px] shadow-sm">
+                        <div class="flex items-center gap-3"><b class="font-mono text-slate-300 uppercase">${d}</b> <span class="font-black text-slate-800">${txt}</span></div>
+                        <button onclick="deleteLog('${type}', '${d}')" class="text-slate-200 hover:text-red-500 p-1"><i class="fas fa-trash-alt"></i></button>
+                    </div>`;
+            });
         }
 
         function updateProgress() {
             const today = new Date().toISOString().split('T')[0];
             const tasks = state.calendar[today] || [];
             const done = tasks.filter(t => t.done).length;
-            
-            // Jeśli nie ma zadań, postęp to 100%
             const p = tasks.length === 0 ? 100 : Math.round((done/tasks.length)*100);
             
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('progressText').innerText = p + '%';
-            document.getElementById('todayDate').innerText = today;
-            document.getElementById('currentStepsDisplay').innerText = state.steps[today] || 0;
+            document.getElementById('todayDate').innerText = new Date().toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('currentStepsDisplay').innerText = (state.steps[today] || 0).toLocaleString();
         }
 
-        // Init
         document.getElementById('workoutDateInput').value = new Date().toISOString().split('T')[0];
     </script>
 </body>
