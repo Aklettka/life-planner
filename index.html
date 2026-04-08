@@ -17,12 +17,12 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; }
         th, td { white-space: nowrap; border-bottom: 1px solid #f1f5f9; padding: 12px 10px; }
         .sticky-col { position: sticky; left: 0; background: white; z-index: 20; border-right: 2px solid #f1f5f9; }
+        input[type="number"]::-webkit-inner-spin-button { display: none; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-24">
 
-    <!-- Header -->
     <header class="bg-indigo-700 text-white p-6 rounded-b-[2.5rem] shadow-xl mb-6 sticky top-0 z-30">
         <div class="flex justify-between items-center mb-4">
             <div>
@@ -44,7 +44,6 @@
     </header>
 
     <main class="px-4 max-w-lg mx-auto lg:max-w-full">
-        <!-- Dashboard -->
         <section id="view-dashboard" class="view-section active space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
                 <div class="flex justify-between items-center mb-6">
@@ -67,36 +66,87 @@
             </div>
         </section>
 
-        <!-- Trening (Inne widoki pominięte dla zwięzłości, zostają te same co wcześniej) -->
-        <section id="view-workout" class="view-section">
-            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center">
-                <i class="fas fa-dumbbell text-4xl text-slate-200 mb-4"></i>
-                <p class="text-slate-500 font-medium">Moduł treningowy ładowany...</p>
+        <section id="view-workout" class="view-section space-y-4">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4">
+                <div class="flex gap-2 mb-4">
+                    <button onclick="switchWorkoutPlan(1)" id="btnPlan1" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-all">Plan A</button>
+                    <button onclick="switchWorkoutPlan(2)" id="btnPlan2" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-all">Plan B</button>
+                </div>
+
+                <div class="flex flex-col gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Data treningu:</label>
+                        <input type="date" id="workoutDateInput" onchange="renderWorkout()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-indigo-600 outline-none">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="exerciseInput" placeholder="Dodaj ćwiczenie..." class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 ring-indigo-500">
+                        <button onclick="addExercise()" class="bg-indigo-600 text-white px-4 rounded-xl font-bold active:scale-95"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div class="workout-scroll rounded-xl border border-slate-100">
+                    <table id="mainWorkoutTable">
+                        <thead class="bg-slate-50">
+                            <tr id="workoutTableHeader">
+                                <th class="sticky-col bg-slate-50">Ćwiczenie</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workoutTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <button onclick="saveWorkoutSession()" class="w-full mt-6 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-700 active:scale-95 transition-all">
+                    ZAPISZ SESJĘ TRENINGOWĄ
+                </button>
             </div>
         </section>
-        
-        <section id="view-generic" class="view-section">
-             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center">
-                <i class="fas fa-chart-line text-4xl text-slate-200 mb-4"></i>
-                <p class="text-slate-500 font-medium">Moduł statystyk ładowany...</p>
+
+        <section id="view-generic" class="view-section space-y-6">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                <h3 id="genericInputTitle" class="font-bold text-slate-800 mb-4 uppercase tracking-wider text-[10px]">Dodaj wpis</h3>
+                <div class="flex flex-col gap-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Data:</span>
+                        <input type="date" id="genericDateInput" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-indigo-600 outline-none">
+                    </div>
+                    <div id="genericInputContainer" class="flex gap-2"></div>
+                </div>
             </div>
+            <div id="genericHistory" class="space-y-2"></div>
         </section>
     </main>
 
-    <!-- Nawigacja -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t px-2 flex justify-around items-center z-40 h-20 shadow-lg">
         <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center justify-center gap-1 w-full h-full" data-view="dashboard"><i class="fas fa-calendar-check text-xl"></i><span class="text-[9px] font-black uppercase">Planer</span></button>
         <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center justify-center gap-1 w-full h-full" data-view="workout"><i class="fas fa-dumbbell text-xl"></i><span class="text-[9px] font-black uppercase">Trening</span></button>
         <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center justify-center gap-1 w-full h-full" data-view="reading"><i class="fas fa-book-open text-xl"></i><span class="text-[9px] font-black uppercase">Czytanie</span></button>
         <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center justify-center gap-1 w-full h-full" data-view="steps"><i class="fas fa-shoe-prints text-xl"></i><span class="text-[9px] font-black uppercase">Kroki</span></button>
+        <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center justify-center gap-1 w-full h-full" data-view="diet"><i class="fas fa-utensils text-xl"></i><span class="text-[9px] font-black uppercase">Dieta</span></button>
+        <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center justify-center gap-1 w-full h-full" data-view="measure"><i class="fas fa-weight text-xl"></i><span class="text-[9px] font-black uppercase">Waga</span></button>
     </nav>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <div id="modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-[2.5rem] p-6 w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalDateDisplay" class="font-black text-xl text-indigo-600"></h3>
+                <button onclick="closeModal()" class="text-slate-300 hover:text-slate-500"><i class="fas fa-times-circle text-2xl"></i></button>
+            </div>
+            <div id="selectedDayTasks" class="space-y-3 mb-6 max-h-64 overflow-y-auto hide-scrollbar"></div>
+            <div class="space-y-3 bg-slate-50 p-4 rounded-3xl">
+                <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-white border border-slate-200 rounded-2xl p-3 text-sm outline-none"></select>
+                <div class="flex gap-2">
+                    <input type="text" id="customTaskInput" placeholder="Nowe zadanie..." class="flex-1 bg-white border border-slate-200 rounded-2xl p-3 text-sm outline-none">
+                    <button onclick="addTaskToDay()" class="bg-indigo-600 text-white px-5 rounded-2xl font-bold"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Globalny stan aplikacji
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
         let state = {
             dutyDB: ["Praca", "Trening", "Nauka"],
             calendar: {},
@@ -104,20 +154,19 @@
             workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } }
         };
 
-        let user = null;
-        let db = null;
-        let auth = null;
+        let user = null; let db = null; let auth = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-planner-v1';
+        const todayStr = new Date().toISOString().split('T')[0];
+        let activeView = 'dashboard';
+        let currentMonth = new Date();
 
-        // --- FUNKCJA INICJALIZUJĄCA FIREBASE ---
-        const startFirebase = async (config) => {
-            const statusBadge = document.getElementById('connectionStatus');
+        // 1. BEZPIECZNA INICJALIZACJA
+        const startApp = async (conf) => {
             try {
-                const app = initializeApp(config);
+                const app = initializeApp(conf);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Auth
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -127,121 +176,214 @@
                 onAuthStateChanged(auth, (u) => {
                     if (u) {
                         user = u;
-                        statusBadge.innerText = 'Online';
-                        statusBadge.className = "bg-emerald-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest text-white shadow-lg";
+                        const status = document.getElementById('connectionStatus');
+                        status.innerText = 'Online';
+                        status.className = "bg-emerald-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest text-white shadow-lg";
                         
-                        // Synchronizacja danych
-                        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
-                        onSnapshot(docRef, (snap) => {
+                        onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), (snap) => {
                             if (snap.exists()) {
                                 state = snap.data();
+                                // Fix dla brakującej struktury workout
+                                if(!state.workout) state.workout = { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } };
                             } else {
-                                save(); // Pierwszy zapis domyślnego stanu
+                                save();
                             }
                             renderAll();
                         });
                     }
                 });
-            } catch (e) {
-                console.error("Firebase init failed:", e);
-                statusBadge.innerText = 'Błąd Połączenia';
+            } catch (e) { console.error(e); }
+        };
+
+        // Sprawdzanie zmiennej config bez ReferenceError
+        const checkConfig = setInterval(() => {
+            if (window['__firebase_config']) {
+                clearInterval(checkConfig);
+                startApp(JSON.parse(window['__firebase_config']));
             }
-        };
+        }, 500);
 
-        // --- BEZPIECZNE OCZEKIWANIE NA KONFIGURACJĘ ---
-        const waitForConfig = () => {
-            const statusBadge = document.getElementById('connectionStatus');
-            let attempts = 0;
-            
-            const check = setInterval(() => {
-                attempts++;
-                let configFound = false;
-                let currentConfig = null;
-
-                try {
-                    if (typeof __firebase_config !== 'undefined') {
-                        currentConfig = JSON.parse(__firebase_config);
-                        configFound = true;
-                    }
-                } catch (e) {}
-
-                if (configFound) {
-                    clearInterval(check);
-                    startFirebase(currentConfig);
-                } else if (attempts > 20) { // Po 10 sekundach (20 * 500ms) przestań szukać
-                    clearInterval(check);
-                    statusBadge.innerText = 'Błąd Konfiguracji';
-                    renderAll(); // Uruchom w trybie offline (tylko sesja)
-                }
-            }, 500);
-        };
-
-        // Inicjalizacja przy ładowaniu strony
-        window.addEventListener('load', () => {
-            document.getElementById('todayDate').innerText = "Dzisiaj, " + new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
-            waitForConfig();
-        });
-
-        // --- FUNKCJE GLOBALNE ---
+        // --- CORE LOGIC ---
         window.save = async () => {
-            if (!user || !db || !state) return;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
-            } catch (e) { console.error("Save error:", e); }
+            if (user && db) await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
         };
 
+        window.switchView = (v) => {
+            activeView = v;
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            const titles = { dashboard:'Planer', workout:'Trening', reading:'Czytanie', steps:'Kroki', diet:'Dieta', measure:'Waga' };
+            document.getElementById('viewTitle').innerText = titles[v];
+            document.querySelector(`[data-view="${v}"]`).classList.add('active');
+
+            if (['reading', 'steps', 'diet', 'measure'].includes(v)) {
+                document.getElementById('view-generic').classList.add('active');
+            } else {
+                document.getElementById(`view-${v}`).classList.add('active');
+            }
+            renderAll();
+        };
+
+        // --- RENDERERS ---
         window.renderAll = () => {
-            // Tutaj wywołaj wszystkie funkcje renderujące (Calendar, Workout itp.)
+            if (!state) return;
             renderCalendar();
-            updateProgressBar();
+            updateProgress();
+            if (activeView === 'workout') renderWorkout();
+            if (['reading', 'steps', 'diet', 'measure'].includes(activeView)) renderGenericView(activeView);
+            
+            document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-white px-3 py-1.5 rounded-xl border border-slate-100 text-[9px] font-black text-indigo-500 uppercase">${d}</div>`).join('');
+            document.getElementById('modalDutySelect').innerHTML = '<option value="">Szablon...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
         };
 
-        // Reszta logiki UI (renderCalendar, changeMonth, switchView itp.)
-        // [Zachowaj logikę z poprzedniego pliku dla renderowania]
-        
-        function updateProgressBar() {
-            const todayStr = new Date().toISOString().split('T')[0];
+        function updateProgress() {
             const tasks = state.calendar[todayStr] || [];
             const done = tasks.filter(t => t.done).length;
             const p = tasks.length ? Math.round((done/tasks.length)*100) : 0;
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('progressText').innerText = p + '%';
+            document.getElementById('todayDate').innerText = "Dzisiaj, " + new Date().toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
         }
 
-        let currentMonth = new Date();
         function renderCalendar() {
             const cont = document.getElementById('calendarDays');
-            if(!cont) return;
             const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
             const names = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
             document.getElementById('currentMonthYear').innerText = `${names[m]} ${y}`;
             cont.innerHTML = '';
-            
-            const firstDay = new Date(y, m, 1).getDay();
-            const offset = firstDay === 0 ? 6 : firstDay - 1;
-            for(let i=0; i<offset; i++) cont.innerHTML += '<div></div>';
-            
-            const daysInMonth = new Date(y, m+1, 0).getDate();
-            for(let d=1; d<=daysInMonth; d++) {
-                const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const hasTasks = state.calendar[dateKey] && state.calendar[dateKey].length > 0;
-                cont.innerHTML += `
-                    <div class="h-14 rounded-2xl border border-slate-100 flex flex-col items-center justify-center bg-white">
-                        <span class="text-xs font-bold">${d}</span>
-                        ${hasTasks ? '<div class="w-1 h-1 bg-indigo-500 rounded-full mt-1"></div>' : ''}
-                    </div>
-                `;
+            const offset = new Date(y, m, 1).getDay();
+            const start = offset === 0 ? 6 : offset - 1;
+            for(let i=0; i<start; i++) cont.innerHTML += '<div></div>';
+            const days = new Date(y, m+1, 0).getDate();
+            for(let d=1; d<=days; d++) {
+                const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const t = state.calendar[key] || [];
+                const isToday = key === todayStr;
+                cont.innerHTML += `<div onclick="openModal('${key}')" class="h-16 border rounded-2xl flex flex-col items-center justify-center cursor-pointer ${isToday?'bg-indigo-600 border-indigo-600 text-white':'bg-white border-slate-100'}">
+                    <span class="text-xs font-black">${d}</span>
+                    ${t.length ? `<span class="text-[8px] font-bold ${isToday?'text-indigo-200':'text-indigo-400'}">${t.filter(x=>x.done).length}/${t.length}</span>` : ''}
+                </div>`;
             }
         }
-        
-        window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
-        window.switchView = (v) => {
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${v === 'dashboard' ? 'dashboard' : (v === 'workout' ? 'workout' : 'generic')}`).classList.add('active');
-            document.querySelector(`[data-view="${v}"]`)?.classList.add('active');
-            document.getElementById('viewTitle').innerText = v.charAt(0).toUpperCase() + v.slice(1);
+
+        // --- WORKOUT ---
+        window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; save(); };
+        window.addExercise = () => {
+            const inp = document.getElementById('exerciseInput');
+            if(inp.value) {
+                state.workout.plans[state.workout.currentPlan].exercises.push({ name: inp.value, sets: 4, history: {} });
+                save(); inp.value = '';
+            }
         };
+
+        function renderWorkout() {
+            const cp = state.workout.currentPlan;
+            const exercises = state.workout.plans[cp].exercises;
+            const date = document.getElementById('workoutDateInput').value || todayStr;
+            document.getElementById('workoutDateInput').value = date;
+
+            document.getElementById('btnPlan1').className = cp === 1 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
+            document.getElementById('btnPlan2').className = cp === 2 ? 'flex-1 py-3 rounded-2xl font-black text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
+
+            const historyDates = new Set();
+            exercises.forEach(ex => Object.keys(ex.history).forEach(d => { if(d!==date) historyDates.add(d); }));
+            const sortedHistory = Array.from(historyDates).sort((a,b) => new Date(b)-new Date(a)).slice(0, 2);
+
+            document.getElementById('workoutTableHeader').innerHTML = `<th class="sticky-col bg-slate-50">Ćwiczenie</th>` + 
+                sortedHistory.map(d => `<th class="text-center text-[10px] text-slate-300 uppercase">${d.split('-').slice(1).reverse().join('.')}</th>`).join('') +
+                `<th class="text-center bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">Sesja</th>`;
+
+            document.getElementById('workoutTableBody').innerHTML = exercises.map((ex, idx) => {
+                const current = ex.history[date] || Array(ex.sets).fill({w:'', r:''});
+                return `<tr>
+                    <td class="sticky-col bg-white">
+                        <div class="font-bold text-xs">${ex.name}</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <button onclick="changeSets(${idx},-1)" class="text-slate-300"><i class="fas fa-minus-circle"></i></button>
+                            <span class="text-[9px] font-black text-indigo-500">${ex.sets}S</span>
+                            <button onclick="changeSets(${idx},1)" class="text-slate-300"><i class="fas fa-plus-circle"></i></button>
+                            <button onclick="removeEx(${idx})" class="ml-auto text-red-200"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                    ${sortedHistory.map(d => `<td class="text-center text-[10px] text-slate-400">${(ex.history[d]||[]).map(s=>`<div>${s.w}x${s.r}</div>`).join('')}</td>`).join('')}
+                    <td class="bg-indigo-50/40 p-2"><div class="space-y-1">${Array.from({length:ex.sets}).map((_,sIdx)=>`
+                        <div class="flex gap-1"><input id="w-${idx}-${sIdx}" value="${current[sIdx]?.w||''}" placeholder="kg" class="w-10 text-[10px] p-1 border rounded"><input id="r-${idx}-${sIdx}" value="${current[sIdx]?.r||''}" placeholder="r" class="w-8 text-[10px] p-1 border rounded"></div>
+                    `).join('')}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.saveWorkoutSession = () => {
+            const date = document.getElementById('workoutDateInput').value;
+            state.workout.plans[state.workout.currentPlan].exercises.forEach((ex, i) => {
+                const session = [];
+                for(let s=0; s<ex.sets; s++) {
+                    session.push({ w: document.getElementById(`w-${i}-${s}`).value, r: document.getElementById(`r-${i}-${s}`).value });
+                }
+                ex.history[date] = session;
+            });
+            save(); alert('Zapisano!');
+        };
+
+        // --- GENERIC VIEWS (DIET, STEPS, ETC) ---
+        function renderGenericView(type) {
+            const cont = document.getElementById('genericInputContainer');
+            const history = document.getElementById('genericHistory');
+            const data = state[type] || {};
+            document.getElementById('genericDateInput').value = todayStr;
+
+            const inputs = {
+                reading: '<input type="number" id="genVal" placeholder="Strony" class="flex-1 p-3 rounded-xl border">',
+                steps: '<input type="number" id="genVal" placeholder="Kroki" class="flex-1 p-3 rounded-xl border">',
+                diet: '<input type="number" id="genKcal" placeholder="Kcal" class="flex-1 p-3 rounded-xl border"><input type="number" id="genProt" placeholder="Białko" class="flex-1 p-3 rounded-xl border">',
+                measure: '<input type="number" step="0.1" id="genW" placeholder="Waga" class="flex-1 p-3 rounded-xl border"><input type="number" step="0.1" id="genF" placeholder="Fat%" class="flex-1 p-3 rounded-xl border">'
+            };
+
+            cont.innerHTML = inputs[type] + `<button onclick="saveGeneric('${type}')" class="bg-indigo-600 text-white px-6 rounded-xl font-bold"><i class="fas fa-save"></i></button>`;
+            
+            history.innerHTML = Object.keys(data).sort((a,b)=>new Date(b)-new Date(a)).map(d => {
+                const v = data[d];
+                let txt = type === 'diet' ? `${v.kcal} kcal | ${v.prot}g B` : (type === 'measure' ? `${v.w} kg | ${v.f}%` : v);
+                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center">
+                    <div><span class="text-[10px] font-black text-slate-300 block">${d}</span><span class="text-sm font-bold">${txt}</span></div>
+                    <button onclick="deleteGeneric('${type}','${d}')" class="text-red-200"><i class="fas fa-trash"></i></button>
+                </div>`;
+            }).join('');
+        }
+
+        window.saveGeneric = (type) => {
+            const d = document.getElementById('genericDateInput').value;
+            if (type === 'diet') state[type][d] = { kcal: document.getElementById('genKcal').value, prot: document.getElementById('genProt').value };
+            else if (type === 'measure') state[type][d] = { w: document.getElementById('genW').value, f: document.getElementById('genF').value };
+            else state[type][d] = document.getElementById('genVal').value;
+            save();
+        };
+
+        // --- MODAL & TASKS ---
+        let activeKey = null;
+        window.openModal = (k) => { activeKey = k; document.getElementById('modalDateDisplay').innerText = k; renderModalTasks(); document.getElementById('modal').classList.remove('hidden'); };
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        window.renderModalTasks = () => {
+            const tasks = state.calendar[activeKey] || [];
+            document.getElementById('selectedDayTasks').innerHTML = tasks.map((t,i) => `
+                <div class="flex items-center gap-3 bg-white border border-slate-100 p-4 rounded-2xl">
+                    <div onclick="toggleT(${i})" class="w-6 h-6 rounded-lg border-2 ${t.done?'bg-emerald-500 border-emerald-500 text-white':'border-slate-200'} flex items-center justify-center">${t.done?'<i class="fas fa-check text-[10px]"></i>':''}</div>
+                    <span class="flex-1 text-sm font-bold ${t.done?'line-through text-slate-300':'text-slate-700'}">${t.title}</span>
+                    <button onclick="delT(${i})" class="text-slate-200"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        };
+
+        window.addTaskToDay = () => { const v = document.getElementById('customTaskInput').value; if(v){ if(!state.calendar[activeKey]) state.calendar[activeKey]=[]; state.calendar[activeKey].push({title:v,done:false}); save(); document.getElementById('customTaskInput').value=''; } };
+        window.toggleT = (i) => { state.calendar[activeKey][i].done = !state.calendar[activeKey][i].done; save(); };
+        window.delT = (i) => { state.calendar[activeKey].splice(i,1); save(); };
+        window.addFromDB = (v) => { if(v){ if(!state.calendar[activeKey]) state.calendar[activeKey]=[]; state.calendar[activeKey].push({title:v,done:false}); save(); } };
+        window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth()+dir); renderCalendar(); };
+        window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value=''; } };
+        window.changeSets = (i,d) => { const ex = state.workout.plans[state.workout.currentPlan].exercises[i]; ex.sets = Math.max(1, ex.sets+d); save(); };
+        window.removeEx = (i) => { if(confirm('Usunąć?')){ state.workout.plans[state.workout.currentPlan].exercises.splice(i,1); save(); } };
+        window.deleteGeneric = (t,d) => { delete state[t][d]; save(); };
     </script>
 </body>
 </html>
