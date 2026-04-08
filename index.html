@@ -44,7 +44,7 @@
         </div>
     </header>
 
-    <main class="px-4 max-w-lg mx-auto lg:max-w-4xl">
+    <main class="px-4 max-w-lg mx-auto lg:max-w-6xl">
         <!-- PLANER -->
         <section id="view-dashboard" class="view-section active space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
@@ -192,6 +192,8 @@
                                 <th class="p-2 border-b text-left">Kroki</th>
                                 <th class="p-2 border-b text-left">Strony</th>
                                 <th class="p-2 border-b text-left">Waga</th>
+                                <th class="p-2 border-b text-left">Tłuszcz %</th>
+                                <th class="p-2 border-b text-left">Mięśnie %</th>
                                 <th class="p-2 border-b text-left">Zadania</th>
                             </tr>
                         </thead>
@@ -305,6 +307,13 @@
         window.deleteWorkoutSession = (planIdx, exIdx, date) => {
             delete state.workout.plans[planIdx].exercises[exIdx].history[date];
             save();
+        };
+
+        window.deleteExercise = (planIdx, exIdx) => {
+            if(confirm('Czy na pewno chcesz usunąć to ćwiczenie wraz z całą historią?')) {
+                state.workout.plans[planIdx].exercises.splice(exIdx, 1);
+                save();
+            }
         };
 
         window.switchView = (v) => {
@@ -434,7 +443,12 @@
 
                 return `<tr>
                     <td class="p-3 text-xs font-bold sticky-col border-b bg-white">
-                        ${ex.name}
+                        <div class="flex justify-between items-start gap-2">
+                            <span>${ex.name}</span>
+                            <button onclick="deleteExercise(${cp}, ${exIdx})" class="text-red-400 hover:text-red-600 opacity-30 hover:opacity-100 transition-opacity">
+                                <i class="fas fa-trash text-[10px]"></i>
+                            </button>
+                        </div>
                         <div class="mt-2 space-y-1">
                             ${[1,2,3,4,5].map(s => `
                                 <div class="flex gap-1 items-center">
@@ -519,7 +533,11 @@
                 const diet = state.diet.logs[d] || {kcal:0, protein:0};
                 const steps = state.steps[d] || 0;
                 const pages = state.reading.logs[d] || 0;
-                const weight = state.measure[d]?.w || '-';
+                const measurement = state.measure[d] || null;
+                const weight = measurement?.w || '-';
+                const fat = measurement?.f || '-';
+                const muscle = measurement?.m || '-';
+                
                 const cal = state.calendar[d] || [];
                 const doneTasks = cal.filter(t=>t.done).length;
 
@@ -536,6 +554,8 @@
                         <td class="p-2 border-b">${steps || 0}</td>
                         <td class="p-2 border-b">${pages || 0}</td>
                         <td class="p-2 border-b font-bold">${weight}</td>
+                        <td class="p-2 border-b text-orange-500">${fat}${fat !== '-' ? '%' : ''}</td>
+                        <td class="p-2 border-b text-emerald-500">${muscle}${muscle !== '-' ? '%' : ''}</td>
                         <td class="p-2 border-b">${doneTasks}/${cal.length}</td>
                     </tr>
                 `;
