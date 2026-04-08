@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Planner - Advanced Stats</title>
+    <title>Life Planner - Analytical Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -14,10 +14,10 @@
         .view-section.active { display: block; }
         .nav-btn.active { color: #818cf8; }
         .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        .workout-table-container { overflow-x: auto; }
         input, select { background: rgba(15, 23, 42, 0.6) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
-        ::-webkit-scrollbar { height: 4px; width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .data-table { border-collapse: collapse; width: 100%; }
+        .data-table th, .data-table td { border: 1px solid rgba(255,255,255,0.05); padding: 8px; text-align: left; font-size: 11px; }
+        .data-table tr:hover { background: rgba(255,255,255,0.02); }
     </style>
 </head>
 <body class="pb-24">
@@ -71,20 +71,14 @@
                     <button onclick="switchWorkoutPlan(1)" id="btnPlan1" class="flex-1 py-2 rounded-lg font-bold text-xs transition-all">PLAN A</button>
                     <button onclick="switchWorkoutPlan(2)" id="btnPlan2" class="flex-1 py-2 rounded-lg font-bold text-xs transition-all">PLAN B</button>
                 </div>
-                
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <input type="date" id="workoutDateInput" class="w-full rounded-lg px-3 py-2 text-sm">
                     <button onclick="addExercise()" class="w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-xs">DODAJ ĆWICZENIE</button>
                 </div>
                 <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia..." class="w-full rounded-lg px-3 py-2 text-sm mb-4">
-                
-                <div class="workout-table-container rounded-xl border border-white/5">
+                <div class="overflow-x-auto rounded-xl border border-white/5">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5">
-                            <tr id="workoutTableHead">
-                                <th class="p-3">ĆWICZENIE</th>
-                            </tr>
-                        </thead>
+                        <thead class="bg-white/5"><tr><th class="p-3">ĆWICZENIE</th></tr></thead>
                         <tbody id="workoutTableBody"></tbody>
                     </table>
                 </div>
@@ -92,65 +86,93 @@
             </div>
         </section>
 
-        <!-- CZYTANIE (Rozdzielone) -->
+        <!-- CZYTANIE (Separated) -->
         <section id="view-reading" class="view-section space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Logowanie stron -->
                 <div class="glass-card rounded-2xl p-6">
-                    <h3 class="text-xs font-black uppercase text-indigo-400 mb-4">Postęp (Strony)</h3>
-                    <input type="number" id="readingPageInput" placeholder="Ile stron dzisiaj?" class="w-full rounded-xl px-4 py-3 mb-3 text-sm">
-                    <button onclick="logReading()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">ZAPISZ STRONY</button>
-                    <div id="readingHistory" class="mt-6 space-y-2 max-h-48 overflow-y-auto"></div>
+                    <h3 class="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest">Dzienny Postęp Stron</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="readingPageInput" placeholder="Strony..." class="flex-1 rounded-xl px-4 py-3 text-sm">
+                        <button onclick="logReading()" class="bg-indigo-600 text-white px-6 rounded-xl font-bold">DODAJ</button>
+                    </div>
+                    <div id="readingHistory" class="mt-6 space-y-2 max-h-64 overflow-y-auto"></div>
                 </div>
+                <!-- Biblioteka -->
                 <div class="glass-card rounded-2xl p-6">
-                    <h3 class="text-xs font-black uppercase text-emerald-400 mb-4">Biblioteka (Ukończone)</h3>
-                    <input type="text" id="libraryTitleInput" placeholder="Tytuł książki..." class="w-full rounded-xl px-4 py-3 mb-3 text-sm">
-                    <button onclick="addToLibrary()" class="w-full bg-slate-700 text-white py-3 rounded-xl font-bold">DODAJ DO PRZECZYTANYCH</button>
-                    <div id="libraryList" class="mt-6 space-y-2 max-h-48 overflow-y-auto"></div>
+                    <h3 class="text-xs font-black uppercase text-emerald-400 mb-4 tracking-widest">Ukończone Książki</h3>
+                    <div class="flex flex-col gap-2">
+                        <input type="text" id="libraryTitleInput" placeholder="Tytuł..." class="w-full rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addToLibrary()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Dodaj do Biblioteki</button>
+                    </div>
+                    <div id="libraryList" class="mt-6 space-y-2 max-h-64 overflow-y-auto"></div>
                 </div>
             </div>
         </section>
 
-        <!-- STATYSTYKI (Advanced Analytics) -->
+        <!-- STATYSTYKI (Analytical Engine) -->
         <section id="view-stats" class="view-section space-y-6">
-            <div class="glass-card rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4">
-                <h2 class="text-xl font-black italic">ANALYTICS</h2>
-                <div class="flex gap-2">
-                    <select id="statsYearFilter" onchange="renderStats()" class="p-2 rounded-lg text-xs font-bold"></select>
-                    <select id="statsMonthFilter" onchange="renderStats()" class="p-2 rounded-lg text-xs font-bold">
-                        <option value="all">Cały rok</option>
-                        <option value="01">Styczeń</option><option value="02">Luty</option><option value="03">Marzec</option>
-                        <option value="04">Kwiecień</option><option value="05">Maj</option><option value="06">Czerwiec</option>
-                        <option value="07">Lipiec</option><option value="08">Sierpień</option><option value="09">Wrzesień</option>
-                        <option value="10">Październik</option><option value="11">Listopad</option><option value="12">Grudzień</option>
+            <!-- Panel Filtrów -->
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <h2 class="text-xl font-black uppercase italic tracking-tighter">Analytical Engine</h2>
+                    <div class="flex gap-2">
+                        <select id="statsYearFilter" onchange="renderStats()" class="p-2 rounded-lg text-xs font-bold"></select>
+                        <select id="statsMonthFilter" onchange="renderStats()" class="p-2 rounded-lg text-xs font-bold">
+                            <option value="all">CAŁY ROK</option>
+                            <option value="01">STYCZEŃ</option><option value="02">LUTY</option><option value="03">MARZEC</option>
+                            <option value="04">KWIECIEŃ</option><option value="05">MAJ</option><option value="06">CZERWIEC</option>
+                            <option value="07">LIPIEC</option><option value="08">SIERPIEŃ</option><option value="09">WRZESIEŃ</option>
+                            <option value="10">PAŹDZIERNIK</option><option value="11">LISTOPAD</option><option value="12">GRUDZIEŃ</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Karty szybkiego podglądu -->
+                <div id="analyticalGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+            </div>
+
+            <!-- Wykres Dynamiczny -->
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest">Trend Danych</h3>
+                    <select id="chartTypeFilter" onchange="renderStats()" class="p-1 rounded-lg text-[9px] font-bold">
+                        <option value="steps">Kroki</option>
+                        <option value="reading">Strony</option>
+                        <option value="kcal">Kalorie</option>
+                        <option value="weight">Waga</option>
                     </select>
                 </div>
+                <canvas id="mainStatsChart" height="120"></canvas>
             </div>
 
-            <div id="statsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
-
+            <!-- Surowa Tabela Danych -->
             <div class="glass-card rounded-2xl p-6">
-                <h3 class="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Wykres Trendów</h3>
-                <canvas id="statsChart" height="150"></canvas>
-            </div>
-
-            <div class="glass-card rounded-2xl p-6">
-                <h3 class="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Rekordy Życiowe (PB)</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead>
-                            <tr class="text-slate-500">
-                                <th class="pb-3">ĆWICZENIE</th>
-                                <th class="pb-3 text-center">MAX (KG)</th>
-                                <th class="pb-3 text-right">DATA</th>
+                <h3 class="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Surowe Dane Dziennie</h3>
+                <div class="overflow-x-auto max-h-80">
+                    <table class="data-table">
+                        <thead class="sticky top-0 bg-slate-900">
+                            <tr class="text-slate-500 uppercase">
+                                <th>DATA</th>
+                                <th>KROKI</th>
+                                <th>KCAL</th>
+                                <th>BIAŁKO</th>
+                                <th>STRONY</th>
+                                <th>WAGA</th>
                             </tr>
                         </thead>
-                        <tbody id="pbTableBody"></tbody>
+                        <tbody id="rawDataTableBody"></tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- Rekordy Życiowe (Gym) -->
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-[10px] font-black uppercase text-indigo-400 mb-4 tracking-widest italic">Personal Bests (Gym Records)</h3>
+                <div id="pbList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
         </section>
 
-        <!-- DIETA / KROKI / POMIARY (Standardowe karty) -->
+        <!-- KROKI -->
         <section id="view-steps" class="view-section">
             <div class="glass-card rounded-3xl p-10 text-center">
                 <i class="fas fa-shoe-prints text-4xl text-indigo-500 mb-4"></i>
@@ -164,6 +186,7 @@
             <div id="stepsHistory" class="mt-6 space-y-2"></div>
         </section>
 
+        <!-- DIETA -->
         <section id="view-diet" class="view-section space-y-6">
             <div class="glass-card rounded-2xl p-6">
                 <h3 class="text-xs font-black uppercase text-slate-500 mb-4">Log kalorii</h3>
@@ -176,6 +199,7 @@
             <div id="dietHistory" class="space-y-2"></div>
         </section>
 
+        <!-- POMIARY -->
         <section id="view-measure" class="view-section space-y-6">
             <div class="glass-card rounded-2xl p-6">
                 <h3 class="text-xs font-black uppercase text-slate-500 mb-6 text-center">Pomiary Sylwetki</h3>
@@ -196,13 +220,13 @@
         <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1 flex-1" data-view="dashboard"><i class="fas fa-calendar-alt"></i><span class="text-[8px] font-bold">PLANER</span></button>
         <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="workout"><i class="fas fa-dumbbell"></i><span class="text-[8px] font-bold">TRENING</span></button>
         <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="reading"><i class="fas fa-book"></i><span class="text-[8px] font-bold">CZYTANIE</span></button>
-        <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="stats"><i class="fas fa-chart-line"></i><span class="text-[8px] font-bold">STATS</span></button>
+        <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="stats"><i class="fas fa-chart-bar"></i><span class="text-[8px] font-bold">STATS</span></button>
         <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="steps"><i class="fas fa-running"></i><span class="text-[8px] font-bold">KROKI</span></button>
         <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="diet"><i class="fas fa-apple-alt"></i><span class="text-[8px] font-bold">DIETA</span></button>
         <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center gap-1 flex-1" data-view="measure"><i class="fas fa-weight"></i><span class="text-[8px] font-bold">POMIARY</span></button>
     </nav>
 
-    <!-- TASK MODAL -->
+    <!-- MODAL -->
     <div id="modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="glass-card rounded-3xl p-6 w-full max-w-sm">
             <div class="flex justify-between items-center mb-6">
@@ -260,10 +284,8 @@
             onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), (snap) => {
                 if (snap.exists()) {
                     state = { ...state, ...snap.data() };
-                    // Migracja starego formatu czytania jeśli istnieje
-                    if(typeof state.reading === 'string' || Array.isArray(state.reading)) {
-                        state.reading = { logs: {}, library: [] };
-                    }
+                    // Fix data structure for older versions
+                    if(!state.reading || typeof state.reading === 'string' || Array.isArray(state.reading)) state.reading = { logs: {}, library: [] };
                     renderAll();
                 }
             });
@@ -274,7 +296,7 @@
             await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
         }
 
-        // VIEW NAVIGATION
+        // VIEW LOGIC
         window.switchView = (v) => {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${v}`).classList.add('active');
@@ -285,7 +307,7 @@
             if(v === 'workout') renderWorkout();
         };
 
-        // CALENDAR
+        // CALENDAR & TASKS (Preserved)
         let currentMonth = new Date();
         window.changeMonth = (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); renderCalendar(); };
         function renderCalendar() {
@@ -301,7 +323,6 @@
                 const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const t = state.calendar[key] || [];
                 const isToday = key === new Date().toISOString().split('T')[0];
-                const doneCount = t.filter(x => x.done).length;
                 cont.innerHTML += `
                     <div onclick="openModal('${key}')" class="h-12 border border-white/5 rounded-lg flex flex-col items-center justify-center cursor-pointer ${isToday ? 'bg-indigo-500/20 border-indigo-500' : 'bg-white/5'}">
                         <span class="text-[10px] font-bold ${t.length ? 'text-indigo-400' : 'text-slate-500'}">${d}</span>
@@ -312,7 +333,6 @@
             }
         }
 
-        // TASKS
         let activeDateKey = null;
         window.openModal = (k) => { activeDateKey = k; document.getElementById('modalDateDisplay').innerText = k; renderModalTasks(); document.getElementById('modal').classList.remove('hidden'); };
         window.closeModal = () => document.getElementById('modal').classList.add('hidden');
@@ -324,12 +344,7 @@
                 save(); renderModalTasks(); document.getElementById('customTaskInput').value = '';
             }
         };
-        window.addFromDB = (val) => {
-            if(!val) return;
-            if(!state.calendar[activeDateKey]) state.calendar[activeDateKey] = [];
-            state.calendar[activeDateKey].push({title: val, done: false});
-            save(); renderModalTasks(); document.getElementById('modalDutySelect').value = "";
-        };
+        window.addFromDB = (val) => { if(val){ if(!state.calendar[activeDateKey]) state.calendar[activeDateKey] = []; state.calendar[activeDateKey].push({title: val, done: false}); save(); renderModalTasks(); document.getElementById('modalDutySelect').value = ""; }};
         window.toggleTask = (i) => { state.calendar[activeDateKey][i].done = !state.calendar[activeDateKey][i].done; save(); renderModalTasks(); };
         window.deleteTask = (i) => { state.calendar[activeDateKey].splice(i, 1); save(); renderModalTasks(); };
         function renderModalTasks() {
@@ -345,7 +360,7 @@
         }
         window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; } };
 
-        // WORKOUT
+        // WORKOUT LOGIC (Preserved)
         window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; renderWorkout(); };
         window.addExercise = () => {
             const n = document.getElementById('exerciseInput').value;
@@ -357,8 +372,7 @@
             p.exercises.forEach((ex, i) => {
                 const sets = [];
                 for(let s=0; s<5; s++) {
-                    const w = document.getElementById(`weight-${i}-${s}`)?.value;
-                    const r = document.getElementById(`reps-${i}-${s}`)?.value;
+                    const w = document.getElementById(`weight-${i}-${s}`)?.value, r = document.getElementById(`reps-${i}-${s}`)?.value;
                     if(w || r) sets.push({w: parseFloat(w)||0, r: parseInt(r)||0});
                 }
                 if(sets.length) ex.history[date] = sets;
@@ -370,101 +384,141 @@
             document.getElementById('btnPlan1').className = cp === 1 ? "flex-1 py-2 rounded-lg font-bold text-xs bg-indigo-600" : "flex-1 py-2 rounded-lg font-bold text-xs";
             document.getElementById('btnPlan2').className = cp === 2 ? "flex-1 py-2 rounded-lg font-bold text-xs bg-indigo-600" : "flex-1 py-2 rounded-lg font-bold text-xs";
             const selDate = document.getElementById('workoutDateInput').value || new Date().toISOString().split('T')[0];
-            const exercises = state.workout.plans[cp].exercises;
-            const body = document.getElementById('workoutTableBody');
-            body.innerHTML = exercises.map((ex, i) => `
+            document.getElementById('workoutTableBody').innerHTML = state.workout.plans[cp].exercises.map((ex, i) => `
                 <tr class="border-b border-white/5">
                     <td class="p-3 font-bold text-indigo-400">${ex.name}</td>
                     <td class="p-3">
                         <div class="grid grid-cols-4 gap-1">
-                            ${[0,1,2,3].map(s => `
-                                <div class="space-y-1">
-                                    <input id="weight-${i}-${s}" type="number" step="0.1" value="${ex.history[selDate]?.[s]?.w || ''}" placeholder="kg" class="w-full p-1 text-[8px] rounded">
-                                    <input id="reps-${i}-${s}" type="number" value="${ex.history[selDate]?.[s]?.r || ''}" placeholder="r" class="w-full p-1 text-[8px] rounded">
-                                </div>`).join('')}
+                            ${[0,1,2,3].map(s => `<div class="space-y-1"><input id="weight-${i}-${s}" type="number" step="0.1" value="${ex.history[selDate]?.[s]?.w || ''}" placeholder="kg" class="w-full p-1 text-[8px] rounded"><input id="reps-${i}-${s}" type="number" value="${ex.history[selDate]?.[s]?.r || ''}" placeholder="r" class="w-full p-1 text-[8px] rounded"></div>`).join('')}
                         </div>
                     </td>
                 </tr>`).join('');
         }
 
-        // READING (Rozdzielone)
+        // READING (SEPARATED)
         window.logReading = () => {
             const p = parseInt(document.getElementById('readingPageInput').value);
-            if(p) {
-                const d = new Date().toISOString().split('T')[0];
-                state.reading.logs[d] = (state.reading.logs[d] || 0) + p;
-                save(); document.getElementById('readingPageInput').value = '';
-            }
+            if(p) { const d = new Date().toISOString().split('T')[0]; state.reading.logs[d] = (state.reading.logs[d] || 0) + p; save(); document.getElementById('readingPageInput').value = ''; }
         };
         window.addToLibrary = () => {
             const t = document.getElementById('libraryTitleInput').value;
-            if(t) {
-                state.reading.library.push({title: t, date: new Date().toISOString().split('T')[0]});
-                save(); document.getElementById('libraryTitleInput').value = '';
-            }
+            if(t) { state.reading.library.push({title: t, date: new Date().toISOString().split('T')[0]}); save(); document.getElementById('libraryTitleInput').value = ''; }
         };
 
-        // ANALYTICS ENGINE
+        // ANALYTICAL STATS ENGINE
         let chartInstance = null;
         window.renderStats = () => {
             const year = document.getElementById('statsYearFilter').value;
             const month = document.getElementById('statsMonthFilter').value;
-            const filter = (obj) => Object.entries(obj).filter(([d]) => d.startsWith(year) && (month === 'all' || d.split('-')[1] === month));
-            
-            const stepsF = filter(state.steps);
-            const readingF = filter(state.reading.logs);
-            const dietF = filter(state.diet.logs);
-            
-            const totalPages = readingF.reduce((a,b) => a+b[1], 0);
-            const totalSteps = stepsF.reduce((a,b) => a+b[1], 0);
-            const avgKcal = dietF.length ? Math.round(dietF.reduce((a,b) => a+b[1].kcal, 0) / dietF.length) : 0;
+            const chartDataKey = document.getElementById('chartTypeFilter').value;
 
-            document.getElementById('statsGrid').innerHTML = `
-                <div class="glass-card p-4 rounded-xl border-l-4 border-indigo-500">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Strony</p>
-                    <p class="text-xl font-black">${totalPages}</p>
+            // 1. Data Processing
+            const getFilteredData = (map) => Object.entries(map).filter(([d]) => d.startsWith(year) && (month === 'all' || d.split('-')[1] === month)).sort((a,b) => new Date(a[0]) - new Date(b[0]));
+            
+            const stepsF = getFilteredData(state.steps);
+            const readingF = getFilteredData(state.reading.logs);
+            const dietF = getFilteredData(state.diet.logs);
+            const weightF = getFilteredData(state.measure);
+
+            // 2. Analytical Grid (Summary)
+            const totals = {
+                steps: stepsF.reduce((a,b) => a+b[1], 0),
+                reading: readingF.reduce((a,b) => a+b[1], 0),
+                kcalAvg: dietF.length ? Math.round(dietF.reduce((a,b) => a+b[1].kcal, 0) / dietF.length) : 0,
+                weightAvg: weightF.length ? (weightF.reduce((a,b) => a+parseFloat(b[1].w), 0) / weightF.length).toFixed(1) : 0
+            };
+
+            document.getElementById('analyticalGrid').innerHTML = `
+                <div class="glass-card p-3 rounded-xl border-t border-indigo-500/30">
+                    <p class="text-[8px] text-slate-500 font-bold uppercase">Suma Kroków</p>
+                    <p class="text-lg font-black">${totals.steps.toLocaleString()}</p>
                 </div>
-                <div class="glass-card p-4 rounded-xl border-l-4 border-emerald-500">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Kroki</p>
-                    <p class="text-xl font-black">${totalSteps.toLocaleString()}</p>
+                <div class="glass-card p-3 rounded-xl border-t border-indigo-500/30">
+                    <p class="text-[8px] text-slate-500 font-bold uppercase">Suma Stron</p>
+                    <p class="text-lg font-black">${totals.reading}</p>
                 </div>
-                <div class="glass-card p-4 rounded-xl border-l-4 border-amber-500">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Śr. Kcal</p>
-                    <p class="text-xl font-black">${avgKcal}</p>
+                <div class="glass-card p-3 rounded-xl border-t border-amber-500/30">
+                    <p class="text-[8px] text-slate-500 font-bold uppercase">Śr. Kalorii</p>
+                    <p class="text-lg font-black">${totals.kcalAvg}</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl border-t border-emerald-500/30">
+                    <p class="text-[8px] text-slate-500 font-bold uppercase">Śr. Waga</p>
+                    <p class="text-lg font-black">${totals.weightAvg} kg</p>
                 </div>`;
 
-            // PB Table
-            const pbs = {};
-            [1,2].forEach(p => state.workout.plans[p].exercises.forEach(ex => {
-                Object.entries(ex.history).forEach(([d, s]) => s.forEach(set => {
-                    if(!pbs[ex.name] || set.w > pbs[ex.name].w) pbs[ex.name] = {w: set.w, d: d};
-                }));
-            }));
-            document.getElementById('pbTableBody').innerHTML = Object.entries(pbs).map(([n, d]) => `
-                <tr class="border-b border-white/5">
-                    <td class="py-2 font-bold text-indigo-400">${n}</td>
-                    <td class="py-2 text-center font-black">${d.w} kg</td>
-                    <td class="py-2 text-right text-[10px] text-slate-500 font-mono">${d.d}</td>
+            // 3. Raw Data Table
+            const allDates = [...new Set([...Object.keys(state.steps), ...Object.keys(state.diet.logs), ...Object.keys(state.reading.logs), ...Object.keys(state.measure)])]
+                .filter(d => d.startsWith(year) && (month === 'all' || d.split('-')[1] === month))
+                .sort((a,b) => new Date(b) - new Date(a));
+
+            document.getElementById('rawDataTableBody').innerHTML = allDates.map(d => `
+                <tr>
+                    <td class="font-mono text-slate-500">${d}</td>
+                    <td class="font-bold">${state.steps[d] || '-'}</td>
+                    <td class="text-amber-400 font-bold">${state.diet.logs[d]?.kcal || '-'}</td>
+                    <td class="text-amber-600">${state.diet.logs[d]?.protein || '-'}g</td>
+                    <td class="text-indigo-400 font-bold">${state.reading.logs[d] || '-'}</td>
+                    <td class="text-emerald-400 font-black">${state.measure[d]?.w || '-'}</td>
                 </tr>`).join('');
 
-            // Chart
-            const ctx = document.getElementById('statsChart').getContext('2d');
+            // 4. Charting
+            const ctx = document.getElementById('mainStatsChart').getContext('2d');
             if(chartInstance) chartInstance.destroy();
-            const last7 = stepsF.slice(-7);
+
+            let targetData = [];
+            if(chartDataKey === 'steps') targetData = stepsF;
+            if(chartDataKey === 'reading') targetData = readingF;
+            if(chartDataKey === 'kcal') targetData = dietF.map(x => [x[0], x[1].kcal]);
+            if(chartDataKey === 'weight') targetData = weightF.map(x => [x[0], parseFloat(x[1].w)]);
+
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: last7.map(x => x[0].slice(5)),
-                    datasets: [{ label: 'Kroki', data: last7.map(x => x[1]), borderColor: '#818cf8', tension: 0.4 }]
+                    labels: targetData.map(x => x[0].slice(5)),
+                    datasets: [{
+                        label: chartDataKey.toUpperCase(),
+                        data: targetData.map(x => x[1]),
+                        borderColor: '#818cf8',
+                        backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
                 },
-                options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } } }
+                options: { 
+                    responsive: true,
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { font: { size: 9 } } }, 
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } } 
+                    } 
+                }
             });
+
+            // 5. Personal Bests (Gym)
+            const pbs = {};
+            [1,2].forEach(p => state.workout.plans[p].exercises.forEach(ex => {
+                Object.entries(ex.history).forEach(([date, sets]) => sets.forEach(set => {
+                    if(!pbs[ex.name] || set.w > pbs[ex.name].w) pbs[ex.name] = {w: set.w, date};
+                }));
+            }));
+            document.getElementById('pbList').innerHTML = Object.entries(pbs).map(([n, d]) => `
+                <div class="glass-card p-3 rounded-xl flex justify-between items-center border border-white/5">
+                    <div>
+                        <p class="text-[9px] font-black uppercase text-indigo-400">${n}</p>
+                        <p class="text-[8px] text-slate-500 font-mono">${d.date}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-black">${d.w} <span class="text-xs text-slate-500 uppercase">kg</span></p>
+                    </div>
+                </div>`).join('');
         };
 
-        // OTHER LOGS
+        // SHARED LOGS (Steps, Diet, Measure)
         window.logSteps = () => { const v = parseInt(document.getElementById('stepsInput').value); if(v){ state.steps[new Date().toISOString().split('T')[0]] = v; save(); document.getElementById('stepsInput').value = ''; } };
         window.logDiet = () => { const k = parseInt(document.getElementById('dietKcalInput').value)||0, p = parseInt(document.getElementById('dietProteinInput').value)||0, d = new Date().toISOString().split('T')[0]; if(!state.diet.logs[d]) state.diet.logs[d] = {kcal:0, protein:0}; state.diet.logs[d].kcal += k; state.diet.logs[d].protein += p; save(); document.getElementById('dietKcalInput').value=''; document.getElementById('dietProteinInput').value=''; };
         window.logMeasure = () => { const w = document.getElementById('weightInput').value, f = document.getElementById('fatInput').value, m = document.getElementById('muscleInput').value; if(w){ state.measure[new Date().toISOString().split('T')[0]] = {w, f, m}; save(); } };
+        
         window.deleteLog = (type, key, sub = null) => { 
             if(sub === 'library') state.reading.library.splice(key, 1);
             else if(type === 'reading') delete state.reading.logs[key];
@@ -479,17 +533,12 @@
             document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-indigo-500/20 px-3 py-1 rounded-full text-[9px] font-black border border-indigo-500/30">${d}</div>`).join('');
             document.getElementById('modalDutySelect').innerHTML = '<option value="">Baza...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
             
-            const history = (id, map, type, u="", sub=null) => {
+            const history = (id, map, type, u="") => {
                 const c = document.getElementById(id); c.innerHTML = '';
                 Object.keys(map).sort((a,b)=>new Date(b)-new Date(a)).forEach(k => {
                     const v = map[k];
                     let val = typeof v === 'object' ? `${v.kcal || v.w}${u}` : `${v}${u}`;
-                    c.innerHTML += `
-                        <div class="bg-white/5 p-2 rounded-lg flex justify-between items-center text-[10px] border border-white/5">
-                            <span class="font-mono text-slate-500 uppercase">${k}</span>
-                            <span class="font-bold">${val}</span>
-                            <button onclick="deleteLog('${type}', '${k}')" class="text-slate-600"><i class="fas fa-times"></i></button>
-                        </div>`;
+                    c.innerHTML += `<div class="bg-white/5 p-2 rounded-lg flex justify-between items-center text-[10px] border border-white/5"><span class="font-mono text-slate-500">${k}</span><span class="font-bold">${val}</span><button onclick="deleteLog('${type}', '${k}')" class="text-slate-600"><i class="fas fa-times"></i></button></div>`;
                 });
             };
 
@@ -498,14 +547,17 @@
             history('dietHistory', state.diet.logs, 'diet', ' kcal');
             history('measureHistory', state.measure, 'measure', ' kg');
 
-            document.getElementById('libraryList').innerHTML = state.reading.library.map((b, i) => `
-                <div class="bg-emerald-500/10 p-2 rounded-lg flex justify-between items-center text-[10px] border border-emerald-500/20">
-                    <span class="font-bold text-emerald-400">${b.title}</span>
+            document.getElementById('libraryList').innerHTML = (state.reading.library || []).map((b, i) => `
+                <div class="bg-emerald-500/10 p-3 rounded-xl flex justify-between items-center text-[10px] border border-emerald-500/20">
+                    <div>
+                        <p class="font-black text-emerald-400 uppercase">${b.title}</p>
+                        <p class="text-[8px] text-slate-500 font-mono">${b.date}</p>
+                    </div>
                     <button onclick="deleteLog('reading', ${i}, 'library')" class="text-slate-600"><i class="fas fa-times"></i></button>
                 </div>`).join('');
 
             const years = new Set([new Date().getFullYear().toString()]);
-            Object.keys(state.steps).forEach(d => years.add(d.split('-')[0]));
+            [state.steps, state.diet.logs, state.reading.logs, state.measure].forEach(m => Object.keys(m).forEach(d => years.add(d.split('-')[0])));
             document.getElementById('statsYearFilter').innerHTML = Array.from(years).map(y => `<option value="${y}">${y}</option>`).join('');
 
             updateHeader();
