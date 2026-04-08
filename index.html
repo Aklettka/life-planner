@@ -89,8 +89,7 @@
                     <table class="w-full text-left">
                         <thead class="bg-slate-50">
                             <tr id="workoutTableHead">
-                                <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie</th>
-                                <!-- Kolumny dat będą generowane dynamicznie -->
+                                <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>
                             </tr>
                         </thead>
                         <tbody id="workoutTableBody"></tbody>
@@ -161,13 +160,45 @@
             <div id="measureHistory" class="space-y-2"></div>
         </section>
 
-        <!-- STATYSTYKI -->
+        <!-- ROZBUDOWANE STATYSTYKI -->
         <section id="view-stats" class="view-section space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">Analiza Życia</h3>
-                <div id="statsContent" class="space-y-6">
-                    <!-- Statystyki generowane JS -->
+                <h3 class="font-bold text-slate-800 mb-4">Centrum Analityczne</h3>
+                
+                <div class="bg-slate-50 p-4 rounded-2xl mb-6 space-y-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Wybierz zakres dat</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[8px] text-slate-400">OD</label>
+                            <input type="date" id="statsDateFrom" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400">DO</label>
+                            <input type="date" id="statsDateTo" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
+                        </div>
+                    </div>
+                    <button onclick="renderStats()" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-xs font-bold shadow-sm">Generuj Raport</button>
                 </div>
+
+                <div id="statsSummary" class="grid grid-cols-2 gap-3 mb-6"></div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[10px] border-collapse" id="statsTable">
+                        <thead>
+                            <tr class="bg-slate-50">
+                                <th class="p-2 border-b text-left">Data</th>
+                                <th class="p-2 border-b text-left">Kalorie</th>
+                                <th class="p-2 border-b text-left">Białko</th>
+                                <th class="p-2 border-b text-left">Kroki</th>
+                                <th class="p-2 border-b text-left">Strony</th>
+                                <th class="p-2 border-b text-left">Waga</th>
+                                <th class="p-2 border-b text-left">Zadania</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="statsWorkoutHistory" class="mt-8 space-y-4"></div>
             </div>
         </section>
     </main>
@@ -247,7 +278,6 @@
             onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), (snap) => {
                 if (snap.exists()) {
                     state = { ...state, ...snap.data() };
-                    // Migracja danych jeśli stare
                     if(!state.reading.books) state.reading.books = [];
                     renderAll();
                 }
@@ -272,6 +302,11 @@
 
         window.deleteBook = (i) => { state.reading.books.splice(i, 1); save(); };
 
+        window.deleteWorkoutSession = (planIdx, exIdx, date) => {
+            delete state.workout.plans[planIdx].exercises[exIdx].history[date];
+            save();
+        };
+
         window.switchView = (v) => {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(`view-${v}`).classList.add('active');
@@ -279,7 +314,14 @@
             const activeBtn = document.querySelector(`[data-view="${v}"]`);
             if (activeBtn) activeBtn.classList.add('active');
             document.getElementById('viewTitle').innerText = v.toUpperCase();
-            if(v === 'stats') renderStats();
+            
+            if(v === 'stats') {
+                const today = new Date().toISOString().split('T')[0];
+                const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                document.getElementById('statsDateFrom').value = weekAgo;
+                document.getElementById('statsDateTo').value = today;
+                renderStats();
+            }
         };
 
         let currentMonth = new Date();
@@ -355,6 +397,11 @@
                     if(w || r) session.push({w, r});
                 }
                 if(session.length > 0) ex.history[targetDate] = session;
+                // Clear inputs
+                for(let s=1; s<=5; s++){
+                    document.getElementById(`w-${i}-${s}`).value = '';
+                    document.getElementById(`r-${i}-${s}`).value = '';
+                }
             });
             save();
         };
@@ -363,34 +410,37 @@
             const cp = state.workout.currentPlan;
             const exercises = state.workout.plans[cp].exercises;
             
-            // Pobierz wszystkie unikalne daty z historii ćwiczeń
             let dates = new Set();
             exercises.forEach(ex => Object.keys(ex.history).forEach(d => dates.add(d)));
             const sortedDates = Array.from(dates).sort((a,b) => new Date(b) - new Date(a));
 
-            // Nagłówek tabeli
             const head = document.getElementById('workoutTableHead');
-            head.innerHTML = `<th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>`;
+            head.innerHTML = `<th class="p-3 text-[10px] font-bold text-slate-400 sticky-col bg-slate-50">Ćwiczenie (Nowa Sesja)</th>`;
             sortedDates.forEach(d => {
-                head.innerHTML += `<th class="p-3 text-[10px] font-bold text-slate-400 border-l">${d}</th>`;
+                head.innerHTML += `<th class="p-3 text-[10px] font-bold text-slate-400 border-l bg-slate-50">${d}</th>`;
             });
 
-            // Body tabeli
-            document.getElementById('workoutTableBody').innerHTML = exercises.map((ex, i) => {
+            document.getElementById('workoutTableBody').innerHTML = exercises.map((ex, exIdx) => {
                 let historyCols = sortedDates.map(d => {
                     const session = ex.history[d] || [];
-                    return `<td class="p-2 border-l border-b text-[9px] align-top text-slate-500">${session.map((s, idx) => `S${idx+1}: ${s.w}kg x ${s.r}<br>`).join('')}</td>`;
+                    if(session.length === 0) return `<td class="p-2 border-l border-b">-</td>`;
+                    return `<td class="p-2 border-l border-b text-[9px] align-top text-slate-500 relative group">
+                        <div class="mb-1">${session.map((s, idx) => `S${idx+1}: ${s.w}kg x ${s.r}<br>`).join('')}</div>
+                        <button onclick="deleteWorkoutSession(${cp}, ${exIdx}, '${d}')" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 transition-opacity">
+                            <i class="fas fa-trash-alt text-[8px]"></i>
+                        </button>
+                    </td>`;
                 }).join('');
 
                 return `<tr>
-                    <td class="p-3 text-xs font-bold sticky-col border-b">
+                    <td class="p-3 text-xs font-bold sticky-col border-b bg-white">
                         ${ex.name}
                         <div class="mt-2 space-y-1">
                             ${[1,2,3,4,5].map(s => `
                                 <div class="flex gap-1 items-center">
                                     <span class="text-[8px] w-3 text-slate-300">${s}</span>
-                                    <input id="w-${i}-${s}" type="number" placeholder="kg" class="w-10 p-0.5 text-[9px] rounded border">
-                                    <input id="r-${i}-${s}" type="number" placeholder="pow" class="w-10 p-0.5 text-[9px] rounded border">
+                                    <input id="w-${exIdx}-${s}" type="number" placeholder="kg" class="w-10 p-0.5 text-[9px] rounded border">
+                                    <input id="r-${exIdx}-${s}" type="number" placeholder="pow" class="w-10 p-0.5 text-[9px] rounded border">
                                 </div>`).join('')}
                         </div>
                     </td>
@@ -439,67 +489,107 @@
             });
         }
 
-        function renderStats() {
-            const cont = document.getElementById('statsContent');
-            const dates = Object.keys(state.calendar).sort();
+        window.renderStats = () => {
+            const from = document.getElementById('statsDateFrom').value;
+            const to = document.getElementById('statsDateTo').value;
+            if(!from || !to) return;
+
+            const start = new Date(from);
+            const end = new Date(to);
+            let daysInRange = [];
+            let curr = new Date(start);
+            while(curr <= end) {
+                daysInRange.push(new Date(curr).toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+            daysInRange.reverse();
+
+            // Stats calculations
+            let totals = { kcal: 0, protein: 0, steps: 0, pages: 0, sessions: 0, books: 0 };
+            let count = { kcal: 0, protein: 0, steps: 0, pages: 0 };
             
-            // Oblicz średnie
-            const stepVals = Object.values(state.steps);
-            const avgSteps = stepVals.length ? Math.round(stepVals.reduce((a,b)=>a+b,0)/stepVals.length) : 0;
-            const dietVals = Object.values(state.diet.logs);
-            const avgKcal = dietVals.length ? Math.round(dietVals.reduce((a,b)=>a+b.kcal,0)/dietVals.length) : 0;
-            
-            cont.innerHTML = `
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-indigo-50 p-4 rounded-2xl">
-                        <p class="text-[10px] text-indigo-400 font-bold uppercase">Śr. Kroki</p>
-                        <p class="text-xl font-bold text-indigo-700">${avgSteps}</p>
-                    </div>
-                    <div class="bg-emerald-50 p-4 rounded-2xl">
-                        <p class="text-[10px] text-emerald-400 font-bold uppercase">Śr. Kcal</p>
-                        <p class="text-xl font-bold text-emerald-700">${avgKcal}</p>
-                    </div>
+            // Count books in range
+            totals.books = state.reading.books.filter(b => b.date >= from && b.date <= to).length;
+
+            let tableHTML = '';
+            let workoutDetailsHTML = '<h4 class="font-bold text-xs text-slate-800 uppercase mt-6 mb-2">Szczegóły Treningów</h4>';
+            let workoutsFound = false;
+
+            daysInRange.forEach(d => {
+                const diet = state.diet.logs[d] || {kcal:0, protein:0};
+                const steps = state.steps[d] || 0;
+                const pages = state.reading.logs[d] || 0;
+                const weight = state.measure[d]?.w || '-';
+                const cal = state.calendar[d] || [];
+                const doneTasks = cal.filter(t=>t.done).length;
+
+                if(diet.kcal) { totals.kcal += diet.kcal; count.kcal++; }
+                if(diet.protein) { totals.protein += diet.protein; count.protein++; }
+                if(steps) { totals.steps += steps; count.steps++; }
+                if(pages) { totals.pages += pages; count.pages++; }
+
+                tableHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-2 border-b font-semibold text-slate-500">${d}</td>
+                        <td class="p-2 border-b text-indigo-600">${diet.kcal || 0}</td>
+                        <td class="p-2 border-b text-indigo-600">${diet.protein || 0}g</td>
+                        <td class="p-2 border-b">${steps || 0}</td>
+                        <td class="p-2 border-b">${pages || 0}</td>
+                        <td class="p-2 border-b font-bold">${weight}</td>
+                        <td class="p-2 border-b">${doneTasks}/${cal.length}</td>
+                    </tr>
+                `;
+
+                // Workout sessions on this day
+                let dayWorkouts = [];
+                [1,2].forEach(planIdx => {
+                    state.workout.plans[planIdx].exercises.forEach(ex => {
+                        if(ex.history[d]) {
+                            dayWorkouts.push({plan: planIdx === 1 ? 'A' : 'B', ex: ex.name, sets: ex.history[d]});
+                        }
+                    });
+                });
+
+                if(dayWorkouts.length > 0) {
+                    workoutsFound = true;
+                    totals.sessions++;
+                    workoutDetailsHTML += `<div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 mb-2">
+                        <p class="text-[10px] font-bold text-indigo-600 mb-1">${d} - Plan ${dayWorkouts[0].plan}</p>
+                        ${dayWorkouts.map(dw => `<div class="text-[9px] text-slate-600"><b>${dw.ex}:</b> ${dw.sets.map(s => `${s.w}kgx${s.r}`).join(', ')}</div>`).join('')}
+                    </div>`;
+                }
+            });
+
+            const avgKcal = count.kcal ? Math.round(totals.kcal / count.kcal) : 0;
+            const avgProtein = count.protein ? Math.round(totals.protein / count.protein) : 0;
+            const avgSteps = count.steps ? Math.round(totals.steps / count.steps) : 0;
+
+            document.getElementById('statsSummary').innerHTML = `
+                <div class="bg-indigo-50 p-4 rounded-2xl">
+                    <p class="text-[8px] text-indigo-400 font-bold uppercase">Łącznie / Średnio</p>
+                    <p class="text-sm font-bold text-indigo-700">${totals.kcal} / ${avgKcal} kcal</p>
+                    <p class="text-sm font-bold text-indigo-700">${totals.protein} / ${avgProtein}g B</p>
                 </div>
-                
-                <div class="space-y-4">
-                    <h4 class="font-bold text-xs text-slate-400 uppercase">Szczegóły aktywności</h4>
-                    <div class="bg-white border rounded-2xl overflow-hidden text-[10px]">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="p-2 border-b">Data</th>
-                                    <th class="p-2 border-b">Zadania</th>
-                                    <th class="p-2 border-b">Strony</th>
-                                    <th class="p-2 border-b">Waga</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${Object.keys(state.calendar).slice(-10).reverse().map(d => {
-                                    const tasks = state.calendar[d] || [];
-                                    const done = tasks.filter(t=>t.done).length;
-                                    return `<tr>
-                                        <td class="p-2 border-b">${d}</td>
-                                        <td class="p-2 border-b">${done}/${tasks.length}</td>
-                                        <td class="p-2 border-b">${state.reading.logs[d] || 0}</td>
-                                        <td class="p-2 border-b">${state.measure[d]?.w || '-'} kg</td>
-                                    </tr>`;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="text-[9px] text-slate-400 text-center italic">Wyświetlam 10 ostatnich dni aktywności</p>
+                <div class="bg-emerald-50 p-4 rounded-2xl">
+                    <p class="text-[8px] text-emerald-400 font-bold uppercase">Aktywność</p>
+                    <p class="text-sm font-bold text-emerald-700">${totals.steps} / ${avgSteps} kroków</p>
+                    <p class="text-sm font-bold text-emerald-700">${totals.pages} stron | ${totals.books} książek</p>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl col-span-2">
+                    <p class="text-[8px] text-slate-400 font-bold uppercase">Treningi w tym okresie</p>
+                    <p class="text-sm font-bold text-slate-700">${totals.sessions} sesji treningowych</p>
                 </div>
             `;
-        }
+
+            document.getElementById('statsTableBody').innerHTML = tableHTML;
+            document.getElementById('statsWorkoutHistory').innerHTML = workoutsFound ? workoutDetailsHTML : '<p class="text-center text-slate-400 text-xs py-4">Brak treningów w wybranym zakresie</p>';
+        };
 
         function updateProgress() {
             const today = new Date().toISOString().split('T')[0];
             const tasks = state.calendar[today] || [];
             const done = tasks.filter(t => t.done).length;
-            
-            // Logika: 0/0 = 100%, inaczej %
             const p = tasks.length === 0 ? 100 : Math.round((done/tasks.length)*100);
-            
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('progressText').innerText = p + '%';
             document.getElementById('todayDate').innerText = today;
