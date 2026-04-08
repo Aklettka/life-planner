@@ -16,7 +16,7 @@
         .workout-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { border-collapse: separate; border-spacing: 0; }
         th, td { white-space: nowrap; border-bottom: 1px solid #f1f5f9; }
-        .sticky-col { position: sticky; left: 0; background: white; z-index: 10; border-right: 2px solid #f1f5f9; }
+        .sticky-col { position: sticky; left: 0; background: white; z-index: 20; border-right: 2px solid #f1f5f9; }
         ::-webkit-scrollbar { height: 6px; width: 4px; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
@@ -84,6 +84,7 @@
                         <thead class="bg-slate-50">
                             <tr id="workoutTableHead">
                                 <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie</th>
+                                <!-- Tu wskoczą daty -->
                             </tr>
                         </thead>
                         <tbody id="workoutTableBody"></tbody>
@@ -177,8 +178,6 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =========================================================================
-        // TWOJA KONFIGURACJA FIREBASE
-        // =========================================================================
         const firebaseConfig = {
           apiKey: "AIzaSyC_3bNv1sAE2Mz1Q2azqgBbyFF9Lg7wpgg",
           authDomain: "life-planer-95ec9.firebaseapp.com",
@@ -202,15 +201,8 @@
             workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } }
         };
 
-        // Inicjalizacja autoryzacji
         const initAuth = async () => {
-            try {
-                await signInAnonymously(auth);
-            } catch (e) {
-                console.error("Auth error:", e);
-                document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
-                document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
-            }
+            try { await signInAnonymously(auth); } catch (e) { console.error("Auth error:", e); }
         };
 
         onAuthStateChanged(auth, (u) => {
@@ -231,20 +223,12 @@
                     state = { ...state, ...snap.data() };
                     renderAll();
                 }
-            }, (err) => {
-                console.error("Błąd Firestore (sprawdź reguły):", err);
-                document.getElementById('connectionStatus').innerText = 'Błąd Uprawnień';
-                document.getElementById('connectionStatus').classList.replace('bg-emerald-500', 'bg-red-500');
             });
         }
 
         async function save() {
             if (!user) return;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
-            } catch (e) {
-                console.error("Błąd zapisu:", e);
-            }
+            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state);
         }
 
         window.switchView = (v) => {
@@ -254,6 +238,7 @@
             const activeBtn = document.querySelector(`[data-view="${v}"]`);
             if (activeBtn) activeBtn.classList.add('active');
             document.getElementById('viewTitle').innerText = v.charAt(0).toUpperCase() + v.slice(1);
+            if(v === 'workout') renderWorkout();
         };
 
         let currentMonth = new Date();
@@ -310,30 +295,85 @@
                 state.workout.plans[state.workout.currentPlan].exercises.push({name: n, history: {}});
                 save();
                 document.getElementById('exerciseInput').value = '';
+                renderWorkout();
             }
         };
         window.saveWorkoutSession = () => {
             const today = new Date().toISOString().split('T')[0];
             const p = state.workout.plans[state.workout.currentPlan];
             p.exercises.forEach((ex, i) => {
-                const w = document.getElementById(`weight-${i}`).value;
-                const r = document.getElementById(`reps-${i}`).value;
-                if(w || r) ex.history[today] = {w, r};
+                const sets = [];
+                for(let s=0; s<5; s++) {
+                    const w = document.getElementById(`weight-${i}-${s}`)?.value || "";
+                    const r = document.getElementById(`reps-${i}-${s}`)?.value || "";
+                    if(w || r) sets.push({w, r});
+                }
+                if(sets.length > 0) ex.history[today] = sets;
             });
             save();
+            alert("Trening zapisany!");
+            renderWorkout();
         };
+
         function renderWorkout() {
             const cp = state.workout.currentPlan;
             const exercises = state.workout.plans[cp].exercises;
-            document.getElementById('btnPlan1').className = cp === 1 ? 'flex-1 py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
-            document.getElementById('btnPlan2').className = cp === 2 ? 'flex-1 py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg' : 'flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100';
-            document.getElementById('workoutTableBody').innerHTML = exercises.map((ex, i) => `<tr><td class="p-3 text-xs font-bold sticky-col border-b">${ex.name}</td><td class="p-2 border-b"><div class="flex gap-1"><input id="weight-${i}" type="number" placeholder="kg" class="w-12 p-1 text-[10px] rounded border"><input id="reps-${i}" type="number" placeholder="powt" class="w-12 p-1 text-[10px] rounded border"></div></td></tr>`).join('');
+            const today = new Date().toISOString().split('T')[0];
+
+            // Wyciągnij wszystkie unikalne daty z historii wszystkich ćwiczeń tego planu
+            let dates = new Set();
+            exercises.forEach(ex => Object.keys(ex.history).forEach(d => dates.add(d)));
+            dates.add(today);
+            const sortedDates = Array.from(dates).sort((a,b) => new Date(b) - new Date(a)); // Od najnowszych
+
+            // Nagłówek tabeli
+            const head = document.getElementById('workoutTableHead');
+            head.innerHTML = `<th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie</th>`;
+            sortedDates.forEach(d => {
+                head.innerHTML += `<th class="p-3 text-[10px] font-bold text-slate-400 border-l">${d === today ? 'DZISIAJ' : d}</th>`;
+            });
+
+            // Body tabeli
+            const body = document.getElementById('workoutTableBody');
+            body.innerHTML = exercises.map((ex, i) => {
+                let row = `<tr><td class="p-3 text-xs font-bold sticky-col border-b">${ex.name}</td>`;
+                sortedDates.forEach(date => {
+                    const isToday = date === today;
+                    const h = ex.history[date] || [];
+                    let cellContent = "";
+                    
+                    if (isToday) {
+                        cellContent = `<div class="space-y-1">` + 
+                            [0,1,2,3,4].map(s => `
+                                <div class="flex gap-1 items-center">
+                                    <span class="text-[8px] text-slate-300 w-2">${s+1}</span>
+                                    <input id="weight-${i}-${s}" type="number" value="${h[s]?.w || ''}" placeholder="kg" class="w-10 p-1 text-[9px] rounded border">
+                                    <input id="reps-${i}-${s}" type="number" value="${h[s]?.r || ''}" placeholder="r" class="w-10 p-1 text-[9px] rounded border">
+                                </div>`).join('') + `</div>`;
+                    } else {
+                        cellContent = `<div class="text-[9px] text-slate-500">` + 
+                            h.map((s, idx) => `<div>${idx+1}. ${s.w}kg x ${s.r}</div>`).join('') + 
+                            `</div>`;
+                    }
+                    row += `<td class="p-2 border-b border-l align-top">${cellContent}</td>`;
+                });
+                row += `</tr>`;
+                return row;
+            }).join('');
         }
 
-        window.logReading = () => { const v = parseInt(document.getElementById('readingPageInput').value); if(v){ state.reading.logs[new Date().toISOString().split('T')[0]] = (state.reading.logs[new Date().toISOString().split('T')[0]] || 0) + v; save(); document.getElementById('readingPageInput').value = ''; } };
+        window.logReading = () => { const v = parseInt(document.getElementById('readingPageInput').value); if(v){ const d = new Date().toISOString().split('T')[0]; state.reading.logs[d] = (state.reading.logs[d] || 0) + v; save(); document.getElementById('readingPageInput').value = ''; } };
         window.logDiet = () => { const k = parseInt(document.getElementById('dietKcalInput').value) || 0; const p = parseInt(document.getElementById('dietProteinInput').value) || 0; const d = new Date().toISOString().split('T')[0]; if(!state.diet.logs[d]) state.diet.logs[d] = {kcal:0, protein:0}; state.diet.logs[d].kcal += k; state.diet.logs[d].protein += p; save(); document.getElementById('dietKcalInput').value = ''; document.getElementById('dietProteinInput').value = ''; };
         window.logSteps = () => { const v = parseInt(document.getElementById('stepsInput').value); if(v){ state.steps[new Date().toISOString().split('T')[0]] = v; save(); document.getElementById('stepsInput').value = ''; } };
         window.logMeasure = () => { const w = document.getElementById('weightInput').value; const f = document.getElementById('fatInput').value; if(w){ state.measure[new Date().toISOString().split('T')[0]] = {w, f}; save(); document.getElementById('weightInput').value = ''; document.getElementById('fatInput').value = ''; } };
+
+        window.deleteLog = (type, date) => {
+            if(type === 'reading') delete state.reading.logs[date];
+            else if(type === 'diet') delete state.diet.logs[date];
+            else if(type === 'steps') delete state.steps[date];
+            else if(type === 'measure') delete state.measure[date];
+            save();
+        };
 
         function renderAll() {
             renderCalendar();
@@ -353,7 +393,11 @@
             Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).forEach(d => {
                 const v = map[d];
                 let txt = type === 'diet' ? `${v.kcal} kcal | ${v.protein}g B` : type === 'measure' ? `${v.w} kg | ${v.f}%` : `${v} ${unit}`;
-                cont.innerHTML += `<div class="bg-white p-3 rounded-2xl border flex justify-between items-center text-xs"><b>${d}</b> <span class="text-indigo-600">${txt}</span></div>`;
+                cont.innerHTML += `
+                    <div class="bg-white p-3 rounded-2xl border flex justify-between items-center text-xs">
+                        <div><b>${d}</b> <span class="ml-2 text-indigo-600">${txt}</span></div>
+                        <button onclick="deleteLog('${type}', '${d}')" class="text-slate-300 hover:text-red-400 p-1"><i class="fas fa-trash"></i></button>
+                    </div>`;
             });
         }
 
