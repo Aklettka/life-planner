@@ -13,6 +13,8 @@
         .view-section.active { display: block; }
         .nav-btn.active { color: #4f46e5; }
         .nav-btn:not(.active) { color: #94a3b8; }
+        .workout-tab.active { background-color: #4f46e5; color: white; }
+        .workout-tab:not(.active) { background-color: white; color: #94a3b8; border: 1px solid #e2e8f0; }
         .workout-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { border-collapse: separate; border-spacing: 0; }
         th, td { white-space: nowrap; border-bottom: 1px solid #f1f5f9; }
@@ -71,31 +73,82 @@
         <!-- TRENING -->
         <section id="view-workout" class="view-section space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <div class="flex gap-2 mb-6">
-                    <button onclick="switchWorkoutPlan(1)" id="btnPlan1" class="flex-1 py-3 rounded-2xl font-bold text-sm bg-indigo-600 text-white shadow-lg">Plan A</button>
-                    <button onclick="switchWorkoutPlan(2)" id="btnPlan2" class="flex-1 py-3 rounded-2xl font-bold text-sm bg-white text-slate-400 border border-slate-100">Plan B</button>
-                </div>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
-                    <button onclick="addExercise()" class="bg-emerald-500 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Data treningu:</label>
-                    <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border-none rounded-xl p-2 text-sm">
+                <!-- Zakładki Treningowe -->
+                <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+                    <button onclick="switchWorkoutType('plan1')" id="btnPlan1" class="workout-tab active flex-1 py-3 rounded-2xl font-bold text-sm shadow-lg">Plan A</button>
+                    <button onclick="switchWorkoutType('plan2')" id="btnPlan2" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">Plan B</button>
+                    <button onclick="switchWorkoutType('cycling')" id="btnCycling" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🚴 Rower</button>
+                    <button onclick="switchWorkoutType('running')" id="btnRunning" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🏃 Bieganie</button>
                 </div>
 
-                <div class="workout-table-container">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50">
-                            <tr id="workoutTableHead">
-                                <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="workoutTableBody"></tbody>
-                    </table>
+                <!-- PLAN A & B (Ćwiczenia siłowe) -->
+                <div id="planWorkoutContent">
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addExercise()" class="bg-emerald-500 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Data treningu:</label>
+                        <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border-none rounded-xl p-2 text-sm">
+                    </div>
+
+                    <div class="workout-table-container">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50">
+                                <tr id="workoutTableHead">
+                                    <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workoutTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję (5 serii)</button>
                 </div>
-                <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję (5 serii)</button>
+
+                <!-- ROWER -->
+                <div id="cyclingContent" style="display: none;">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
+                                <input type="number" id="cyclingTime" placeholder="np. 45" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
+                                <input type="number" id="cyclingDistance" step="0.1" placeholder="np. 12.5" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
+                            <input type="text" id="cyclingComment" placeholder="np. Szybki przejazd w parku" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                        </div>
+                        <button onclick="saveCyclingSession()" class="w-full bg-cyan-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz jazdę</button>
+                    </div>
+                    <div id="cyclingHistory" class="space-y-2 mt-6"></div>
+                </div>
+
+                <!-- BIEGANIE -->
+                <div id="runningContent" style="display: none;">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
+                                <input type="number" id="runningTime" placeholder="np. 30" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
+                                <input type="number" id="runningDistance" step="0.1" placeholder="np. 5.2" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
+                            <input type="text" id="runningComment" placeholder="np. Tempowe bieganie, zmęczenie średnie" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                        </div>
+                        <button onclick="saveRunningSession()" class="w-full bg-red-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz bieg</button>
+                    </div>
+                    <div id="runningHistory" class="space-y-2 mt-6"></div>
+                </div>
             </div>
         </section>
 
@@ -253,10 +306,13 @@
         const appId = 'life-planner-v1';
 
         let user = null;
+        let currentWorkoutType = 'plan1';
         let state = {
             dutyDB: [], calendar: {}, reading: { logs: {}, books: [] }, steps: {},
             diet: { logs: {} }, measure: {}, 
-            workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } }
+            workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } },
+            cycling: { sessions: [] },
+            running: { sessions: [] }
         };
 
         const initAuth = async () => {
@@ -281,6 +337,8 @@
                 if (snap.exists()) {
                     state = { ...state, ...snap.data() };
                     if(!state.reading.books) state.reading.books = [];
+                    if(!state.cycling) state.cycling = { sessions: [] };
+                    if(!state.running) state.running = { sessions: [] };
                     renderAll();
                 }
             }, (err) => {
@@ -292,6 +350,144 @@
         async function save() {
             if (!user) return;
             try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state); } catch (e) {}
+        }
+
+        window.switchWorkoutType = (type) => {
+            currentWorkoutType = type;
+            
+            // Ukryj wszystkie treści
+            document.getElementById('planWorkoutContent').style.display = 'none';
+            document.getElementById('cyclingContent').style.display = 'none';
+            document.getElementById('runningContent').style.display = 'none';
+            
+            // Zresetuj przyciski
+            document.querySelectorAll('.workout-tab').forEach(btn => btn.classList.remove('active'));
+            
+            if(type === 'plan1') {
+                document.getElementById('btnPlan1').classList.add('active');
+                document.getElementById('planWorkoutContent').style.display = 'block';
+                state.workout.currentPlan = 1;
+                renderWorkout();
+            } else if(type === 'plan2') {
+                document.getElementById('btnPlan2').classList.add('active');
+                document.getElementById('planWorkoutContent').style.display = 'block';
+                state.workout.currentPlan = 2;
+                renderWorkout();
+            } else if(type === 'cycling') {
+                document.getElementById('btnCycling').classList.add('active');
+                document.getElementById('cyclingContent').style.display = 'block';
+                renderCyclingHistory();
+            } else if(type === 'running') {
+                document.getElementById('btnRunning').classList.add('active');
+                document.getElementById('runningContent').style.display = 'block';
+                renderRunningHistory();
+            }
+        };
+
+        window.saveCyclingSession = () => {
+            const time = document.getElementById('cyclingTime').value;
+            const distance = document.getElementById('cyclingDistance').value;
+            const comment = document.getElementById('cyclingComment').value;
+            
+            if(!time || !distance) {
+                alert('Uzupełnij czas i dystans!');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            state.cycling.sessions.push({
+                date: today,
+                time: parseInt(time),
+                distance: parseFloat(distance),
+                comment: comment
+            });
+            
+            save();
+            document.getElementById('cyclingTime').value = '';
+            document.getElementById('cyclingDistance').value = '';
+            document.getElementById('cyclingComment').value = '';
+            renderCyclingHistory();
+        };
+
+        window.saveRunningSession = () => {
+            const time = document.getElementById('runningTime').value;
+            const distance = document.getElementById('runningDistance').value;
+            const comment = document.getElementById('runningComment').value;
+            
+            if(!time || !distance) {
+                alert('Uzupełnij czas i dystans!');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            state.running.sessions.push({
+                date: today,
+                time: parseInt(time),
+                distance: parseFloat(distance),
+                comment: comment
+            });
+            
+            save();
+            document.getElementById('runningTime').value = '';
+            document.getElementById('runningDistance').value = '';
+            document.getElementById('runningComment').value = '';
+            renderRunningHistory();
+        };
+
+        window.deleteCyclingSession = (index) => {
+            state.cycling.sessions.splice(index, 1);
+            save();
+            renderCyclingHistory();
+        };
+
+        window.deleteRunningSession = (index) => {
+            state.running.sessions.splice(index, 1);
+            save();
+            renderRunningHistory();
+        };
+
+        function renderCyclingHistory() {
+            const cont = document.getElementById('cyclingHistory');
+            if(!cont) return;
+            
+            const sorted = [...state.cycling.sessions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            cont.innerHTML = sorted.map((session, idx) => `
+                <div class="bg-cyan-50 p-4 rounded-2xl border border-cyan-100">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-slate-800">${session.date}</p>
+                            <p class="text-sm text-slate-600">⏱️ ${session.time} min | 📍 ${session.distance} km</p>
+                        </div>
+                        <button onclick="deleteCyclingSession(${idx})" class="text-red-400 hover:text-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ${session.comment ? `<p class="text-xs text-slate-600 italic">"${session.comment}"</p>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderRunningHistory() {
+            const cont = document.getElementById('runningHistory');
+            if(!cont) return;
+            
+            const sorted = [...state.running.sessions].sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            cont.innerHTML = sorted.map((session, idx) => `
+                <div class="bg-red-50 p-4 rounded-2xl border border-red-100">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-slate-800">${session.date}</p>
+                            <p class="text-sm text-slate-600">⏱️ ${session.time} min | 📍 ${session.distance} km | 🏃 ${(session.distance / (session.time / 60)).toFixed(2)} km/h</p>
+                        </div>
+                        <button onclick="deleteRunningSession(${idx})" class="text-red-400 hover:text-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ${session.comment ? `<p class="text-xs text-slate-600 italic">"${session.comment}"</p>` : ''}
+                </div>
+            `).join('');
         }
 
         window.deleteLog = (category, date) => {
@@ -383,13 +579,13 @@
         
         window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; } };
 
-        window.switchWorkoutPlan = (p) => { state.workout.currentPlan = p; renderWorkout(); };
         window.addExercise = () => {
             const n = document.getElementById('exerciseInput').value;
             if(n) {
                 state.workout.plans[state.workout.currentPlan].exercises.push({name: n, history: {}});
                 save();
                 document.getElementById('exerciseInput').value = '';
+                renderWorkout();
             }
         };
         window.saveWorkoutSession = () => {
@@ -406,7 +602,6 @@
                     if(w || r) session.push({w, r});
                 }
                 if(session.length > 0) ex.history[targetDate] = session;
-                // Clear inputs
                 for(let s=1; s<=5; s++){
                     document.getElementById(`w-${i}-${s}`).value = '';
                     document.getElementById(`r-${i}-${s}`).value = '';
@@ -472,6 +667,8 @@
         function renderAll() {
             renderCalendar();
             renderWorkout();
+            renderCyclingHistory();
+            renderRunningHistory();
             document.getElementById('dutyDatabase').innerHTML = state.dutyDB.map(d => `<div class="bg-white px-3 py-1 rounded-full border text-[10px] font-bold text-slate-500">${d}</div>`).join('');
             document.getElementById('modalDutySelect').innerHTML = '<option value="">Wybierz z bazy...</option>' + state.dutyDB.map(d => `<option value="${d}">${d}</option>`).join('');
             renderHistoryList('readingHistory', state.reading.logs, 'reading', 'stron');
@@ -518,11 +715,9 @@
             }
             daysInRange.reverse();
 
-            // Stats calculations
             let totals = { kcal: 0, protein: 0, steps: 0, pages: 0, sessions: 0, books: 0 };
             let count = { kcal: 0, protein: 0, steps: 0, pages: 0 };
             
-            // Count books in range
             totals.books = state.reading.books.filter(b => b.date >= from && b.date <= to).length;
 
             let tableHTML = '';
@@ -560,7 +755,6 @@
                     </tr>
                 `;
 
-                // Workout sessions on this day
                 let dayWorkouts = [];
                 [1,2].forEach(planIdx => {
                     state.workout.plans[planIdx].exercises.forEach(ex => {
