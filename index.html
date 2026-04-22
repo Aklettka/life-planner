@@ -319,7 +319,7 @@
 
     <!-- Nawigacja Dolna -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t px-2 py-3 flex justify-around items-center z-40">
-        <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1" data-view="dashboard"><i class="fas fa-calendar-check"></i><span class="text-[8px] font-bold">PLANER</span></button>
+        <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1" data-view="dashboard"><i class="fas fa-calendar-check"></i><span class="text-[8px] font-bold">PLAN</span></button>
         <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1" data-view="workout"><i class="fas fa-dumbbell"></i><span class="text-[8px] font-bold">TRENING</span></button>
         <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1" data-view="reading"><i class="fas fa-book"></i><span class="text-[8px] font-bold">CZYTANIE</span></button>
         <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1" data-view="steps"><i class="fas fa-shoe-prints"></i><span class="text-[8px] font-bold">KROKI</span></button>
@@ -378,8 +378,21 @@
             running: { sessions: [] }
         };
 
+        // ✅ ZMIANA: Inicjalizacja z localStorage
         const initAuth = async () => {
-            try { await signInAnonymously(auth); } catch (e) {
+            try { 
+                // Sprawdź, czy jest już zapisany UID w localStorage
+                const savedUID = localStorage.getItem('appUID');
+                
+                if (!savedUID) {
+                    // Pierwszy raz - zaloguj anonimowo i zapisz UID
+                    await signInAnonymously(auth);
+                } else {
+                    // Już mamy zapisany UID - zaloguj się tym samym użytkownikiem
+                    // Firebase automatycznie będzie pamiętać tego użytkownika
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
                 document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
             }
@@ -387,11 +400,18 @@
 
         onAuthStateChanged(auth, (u) => {
             if (u) {
+                // ✅ ZMIANA: Zapisz UID do localStorage za pierwszym razem
+                if (!localStorage.getItem('appUID')) {
+                    localStorage.setItem('appUID', u.uid);
+                }
+                
                 user = u;
                 document.getElementById('connectionStatus').innerText = 'Online';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
                 setupListener();
-            } else { initAuth(); }
+            } else { 
+                initAuth(); 
+            }
         });
 
         function setupListener() {
@@ -855,7 +875,10 @@
                 const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const t = state.calendar[key] || [];
                 const isToday = key === new Date().toISOString().split('T')[0];
-                cont.innerHTML += `<div onclick="openModal('${key}')" class="h-12 border rounded-xl flex flex-col items-center justify-center cursor-pointer ${isToday ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-100'}"><span class="text-[10px] font-bold ${t.length ? 'text-indigo-600' : 'text-slate-400'}">${d}</span><div class="flex gap-0.5 mt-1">${t.map(x => `<div class="w-1 h-1 rounded-full ${x.done?'bg-emerald-400':'bg-indigo-300'}"></div>`).slice(0,3).join('')}</div></div>`;
+                cont.innerHTML += `<div onclick="openModal('${key}')" class="h-12 border rounded-xl flex flex-col items-center justify-center cursor-pointer ${isToday ? 'bg-indigo-50 border-indigo-200' : 'border-slate-200'} hover:bg-indigo-50">
+                    <span class="text-xs font-bold text-slate-700">${d}</span>
+                    ${t.length > 0 ? `<span class="text-[8px] text-indigo-600 font-bold">${t.length}/${t.filter(x=>x.done).length}</span>` : ''}
+                </div>`;
             }
         }
 
@@ -884,10 +907,10 @@
         
         function renderModalTasks() {
             const tasks = state.calendar[activeDateKey] || [];
-            document.getElementById('selectedDayTasks').innerHTML = tasks.map((t, i) => `<div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-xs"><div onclick="toggleTask(${i})" class="w-5 h-5 flex items-center justify-center rounded border cursor-pointer ${t.done?'bg-emerald-500 border-emerald-500 text-white':''}">${t.done?'✓':''}</div><span class="flex-1 ${t.done?'line-through opacity-50':''}">${t.title}</span><button onclick="deleteTask(${i})" class="text-red-400 px-2"><i class="fas fa-trash"></i></button></div>`).join('');
+            document.getElementById('selectedDayTasks').innerHTML = tasks.map((t, i) => `<div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-xs"><input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${i})" class="w-4 h-4"><span class="${t.done ? 'line-through text-slate-400' : ''} flex-1">${t.title}</span><button onclick="deleteTask(${i})" class="text-red-400 text-[10px]"><i class="fas fa-trash"></i></button></div>`).join('');
         }
         
-        window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; } };
+        window.addToDatabase = () => { const v = document.getElementById('dbInput').value; if(v){ state.dutyDB.push(v); save(); document.getElementById('dbInput').value = ''; renderAll(); } };
 
         window.addExercise = () => {
             const n = document.getElementById('exerciseInput').value;
@@ -968,10 +991,10 @@
             }).join('');
         }
 
-        window.logReading = () => { const v = parseInt(document.getElementById('readingPageInput').value); if(v){ state.reading.logs[new Date().toISOString().split('T')[0]] = (state.reading.logs[new Date().toISOString().split('T')[0]] || 0) + v; save(); document.getElementById('readingPageInput').value = ''; } };
-        window.addBook = () => { const t = document.getElementById('bookTitleInput').value; if(t){ state.reading.books.push({title: t, date: new Date().toISOString().split('T')[0]}); save(); document.getElementById('bookTitleInput').value = ''; } };
-        window.logSteps = () => { const v = parseInt(document.getElementById('stepsInput').value); if(v){ state.steps[new Date().toISOString().split('T')[0]] = v; save(); document.getElementById('stepsInput').value = ''; } };
-        window.logMeasure = () => { const w = document.getElementById('weightInput').value; const f = document.getElementById('fatInput').value; const m = document.getElementById('muscleInput').value; if(w){ state.measure[new Date().toISOString().split('T')[0]] = {w, f, m}; save(); document.getElementById('weightInput').value = ''; document.getElementById('fatInput').value = ''; document.getElementById('muscleInput').value = ''; } };
+        window.logReading = () => { const v = parseInt(document.getElementById('readingPageInput').value); if(v){ state.reading.logs[new Date().toISOString().split('T')[0]] = (state.reading.logs[new Date().toISOString().split('T')[0]] || 0) + v; save(); document.getElementById('readingPageInput').value = ''; renderAll(); } };
+        window.addBook = () => { const t = document.getElementById('bookTitleInput').value; if(t){ state.reading.books.push({title: t, date: new Date().toISOString().split('T')[0]}); save(); document.getElementById('bookTitleInput').value = ''; renderAll(); } };
+        window.logSteps = () => { const v = parseInt(document.getElementById('stepsInput').value); if(v){ state.steps[new Date().toISOString().split('T')[0]] = v; save(); document.getElementById('stepsInput').value = ''; renderAll(); } };
+        window.logMeasure = () => { const w = document.getElementById('weightInput').value; const f = document.getElementById('fatInput').value; const m = document.getElementById('muscleInput').value; if(w){ state.measure[new Date().toISOString().split('T')[0]] = {w, f, m}; save(); document.getElementById('weightInput').value = ''; document.getElementById('fatInput').value = ''; document.getElementById('muscleInput').value = ''; renderAll(); } };
 
         function renderAll() {
             renderCalendar();
@@ -999,154 +1022,93 @@
             `).join('');
         }
 
-        function renderHistoryList(id, map, type, unit="") {
-            const cont = document.getElementById(id); if (!cont) return;
-            cont.innerHTML = '';
-            Object.keys(map).sort((a,b) => new Date(b) - new Date(a)).forEach(d => {
-                const v = map[d];
-                let txt = type === 'measure' ? `${v.w} kg | ${v.f}% T | ${v.m}% M` : `${v} ${unit}`;
-                cont.innerHTML += `<div class="bg-white p-3 rounded-2xl border flex justify-between items-center text-xs"><b>${d}</b> <span class="text-indigo-600 flex-1 ml-4">${txt}</span> <button onclick="deleteLog('${type}', '${d}')" class="text-red-300 ml-2 px-1"><i class="fas fa-times"></i></button></div>`;
-            });
-        }
-
-        window.renderStats = () => {
-            const from = document.getElementById('statsDateFrom').value;
-            const to = document.getElementById('statsDateTo').value;
-            if(!from || !to) return;
-
-            const start = new Date(from);
-            const end = new Date(to);
-            let daysInRange = [];
-            let curr = new Date(start);
-            while(curr <= end) {
-                daysInRange.push(new Date(curr).toISOString().split('T')[0]);
-                curr.setDate(curr.getDate() + 1);
-            }
-            daysInRange.reverse();
-
-            let totals = { kcal: 0, protein: 0, steps: 0, pages: 0, sessions: 0, books: 0, cycling: 0, running: 0 };
-            let count = { kcal: 0, protein: 0, steps: 0, pages: 0 };
-            
-            totals.books = state.reading.books.filter(b => b.date >= from && b.date <= to).length;
-            totals.cycling = state.cycling.sessions.filter(s => s.date >= from && s.date <= to).length;
-            totals.running = state.running.sessions.filter(s => s.date >= from && s.date <= to).length;
-
-            let tableHTML = '';
-            let workoutDetailsHTML = '<h4 class="font-bold text-xs text-slate-800 uppercase mt-6 mb-2">Szczegóły Treningów</h4>';
-            let workoutsFound = false;
-
-            daysInRange.forEach(d => {
-                const diet = state.diet.logs[d] || {kcal:0, protein:0};
-                const steps = state.steps[d] || 0;
-                const pages = state.reading.logs[d] || 0;
-                const measurement = state.measure[d] || null;
-                const weight = measurement?.w || '-';
-                const fat = measurement?.f || '-';
-                const muscle = measurement?.m || '-';
-                
-                const cal = state.calendar[d] || [];
-                const doneTasks = cal.filter(t=>t.done).length;
-
-                if(diet.kcal) { totals.kcal += diet.kcal; count.kcal++; }
-                if(diet.protein) { totals.protein += diet.protein; count.protein++; }
-                if(steps) { totals.steps += steps; count.steps++; }
-                if(pages) { totals.pages += pages; count.pages++; }
-
-                tableHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-2 border-b font-semibold text-slate-500">${d}</td>
-                        <td class="p-2 border-b text-indigo-600">${diet.kcal || 0}</td>
-                        <td class="p-2 border-b text-indigo-600">${diet.protein || 0}g</td>
-                        <td class="p-2 border-b">${steps || 0}</td>
-                        <td class="p-2 border-b">${pages || 0}</td>
-                        <td class="p-2 border-b font-bold">${weight}</td>
-                        <td class="p-2 border-b text-orange-500">${fat}${fat !== '-' ? '%' : ''}</td>
-                        <td class="p-2 border-b text-emerald-500">${muscle}${muscle !== '-' ? '%' : ''}</td>
-                        <td class="p-2 border-b">${doneTasks}/${cal.length}</td>
-                    </tr>
-                `;
-
-                let dayWorkouts = [];
-                [1,2].forEach(planIdx => {
-                    state.workout.plans[planIdx].exercises.forEach(ex => {
-                        if(ex.history[d]) {
-                            dayWorkouts.push({plan: planIdx === 1 ? 'A' : 'B', ex: ex.name, sets: ex.history[d]});
-                        }
-                    });
-                });
-
-                const cyclingOnDay = state.cycling.sessions.filter(s => s.date === d);
-                cyclingOnDay.forEach(session => {
-                    dayWorkouts.push({plan: 'Rower', ex: `${session.distance}km (${session.time}min)`, sets: []});
-                });
-
-                const runningOnDay = state.running.sessions.filter(s => s.date === d);
-                runningOnDay.forEach(session => {
-                    dayWorkouts.push({plan: 'Bieganie', ex: `${session.distance}km (${session.time}min)`, sets: []});
-                });
-
-                if(dayWorkouts.length > 0) {
-                    workoutsFound = true;
-                    totals.sessions++;
-                    workoutDetailsHTML += `<div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 mb-2">
-                        <p class="text-[10px] font-bold text-indigo-600 mb-1">${d}</p>
-                        ${dayWorkouts.map(dw => `<div class="text-[9px] text-slate-600"><b>${dw.plan}:</b> ${dw.ex}${dw.sets.length > 0 ? ' - ' + dw.sets.map(s => `${s.w}kgx${s.r}`).join(', ') : ''}</div>`).join('')}
-                    </div>`;
+        function renderHistoryList(containerId, data, category, unit) {
+            const cont = document.getElementById(containerId);
+            if(!cont) return;
+            const sorted = Object.entries(data).sort((a,b) => new Date(b[0]) - new Date(a[0]));
+            cont.innerHTML = sorted.map(([date, value]) => {
+                let displayValue = value;
+                if(category === 'measure') {
+                    displayValue = `${value.w}kg | ${value.f}% | ${value.m}%`;
                 }
-            });
-
-            const avgKcal = count.kcal ? Math.round(totals.kcal / count.kcal) : 0;
-            const avgProtein = count.protein ? Math.round(totals.protein / count.protein) : 0;
-            const avgSteps = count.steps ? Math.round(totals.steps / count.steps) : 0;
-
-            document.getElementById('statsSummary').innerHTML = `
-                <div class="bg-indigo-50 p-4 rounded-2xl">
-                    <p class="text-[8px] text-indigo-400 font-bold uppercase">Łącznie / Średnio</p>
-                    <p class="text-sm font-bold text-indigo-700">${totals.kcal} / ${avgKcal} kcal</p>
-                    <p class="text-sm font-bold text-indigo-700">${totals.protein} / ${avgProtein}g B</p>
-                </div>
-                <div class="bg-emerald-50 p-4 rounded-2xl">
-                    <p class="text-[8px] text-emerald-400 font-bold uppercase">Aktywność</p>
-                    <p class="text-sm font-bold text-emerald-700">${totals.steps} / ${avgSteps} kroków</p>
-                    <p class="text-sm font-bold text-emerald-700">${totals.pages} stron | ${totals.books} książek</p>
-                </div>
-                <div class="bg-cyan-50 p-4 rounded-2xl">
-                    <p class="text-[8px] text-cyan-400 font-bold uppercase">Outdoor Treningi</p>
-                    <p class="text-sm font-bold text-cyan-700">🚴 ${totals.cycling} przejazdów</p>
-                    <p class="text-sm font-bold text-cyan-700">🏃 ${totals.running} biegów</p>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-2xl col-span-2">
-                    <p class="text-[8px] text-slate-400 font-bold uppercase">Łącznie sesji treningowych</p>
-                    <p class="text-sm font-bold text-slate-700">${totals.sessions} sesji (siłowe + outdoor)</p>
-                </div>
-            `;
-
-            document.getElementById('statsTableBody').innerHTML = tableHTML;
-            document.getElementById('statsWorkoutHistory').innerHTML = workoutsFound ? workoutDetailsHTML : '<p class="text-center text-slate-400 text-xs py-4">Brak treningów w wybranym zakresie</p>';
-        };
+                return `<div class="bg-slate-50 p-3 rounded-xl flex justify-between items-center text-xs">
+                    <span>${date}: <b>${displayValue}</b> ${unit}</span>
+                    <button onclick="deleteLog('${category}', '${date}')" class="text-red-400 ml-2"><i class="fas fa-trash"></i></button>
+                </div>`;
+            }).join('');
+        }
 
         function updateProgress() {
             const today = new Date().toISOString().split('T')[0];
             const tasks = state.calendar[today] || [];
-            const done = tasks.filter(t => t.done).length;
-            const p = tasks.length === 0 ? 100 : Math.round((done/tasks.length)*100);
-            document.getElementById('progressBar').style.width = p + '%';
-            document.getElementById('progressText').innerText = p + '%';
-            document.getElementById('todayDate').innerText = today;
+            const completed = tasks.filter(t => t.done).length;
+            const total = tasks.length || 1;
+            const percent = Math.round((completed / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').innerText = percent + '%';
+            document.getElementById('todayDate').innerText = new Date().toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('currentStepsDisplay').innerText = state.steps[today] || 0;
         }
 
-        // Inicjalizuj datepicker dla diety
-        document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date().toISOString().split('T')[0];
-            const mealDateInput = document.getElementById('mealDateInput');
-            if(mealDateInput) {
-                mealDateInput.value = today;
-                mealDateInput.addEventListener('change', () => {
-                    renderMealHistory();
-                });
+        function renderStats() {
+            const dateFrom = document.getElementById('statsDateFrom').value;
+            const dateTo = document.getElementById('statsDateTo').value;
+            
+            const dates = Object.keys(state.diet.logs)
+                .filter(d => d >= dateFrom && d <= dateTo)
+                .sort((a,b) => new Date(b) - new Date(a));
+            
+            if(dates.length === 0) {
+                document.getElementById('statsTableBody').innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">Brak danych w wybranym zakresie</td></tr>';
+                return;
             }
-        });
+            
+            let totalKcal = 0, totalProtein = 0, totalSteps = 0, totalPages = 0;
+            
+            document.getElementById('statsTableBody').innerHTML = dates.map(date => {
+                const diet = state.diet.logs[date] || {};
+                const steps = state.steps[date] || 0;
+                const reading = state.reading.logs[date] || 0;
+                const measure = state.measure[date];
+                const tasks = state.calendar[date] || [];
+                
+                totalKcal += diet.kcal || 0;
+                totalProtein += diet.protein || 0;
+                totalSteps += steps;
+                totalPages += reading;
+                
+                return `<tr>
+                    <td class="p-2 border-b">${date}</td>
+                    <td class="p-2 border-b">${diet.kcal || '-'}</td>
+                    <td class="p-2 border-b">${diet.protein?.toFixed(1) || '-'}</td>
+                    <td class="p-2 border-b">${steps || '-'}</td>
+                    <td class="p-2 border-b">${reading || '-'}</td>
+                    <td class="p-2 border-b">${measure?.w || '-'}</td>
+                    <td class="p-2 border-b">${measure?.f || '-'}</td>
+                    <td class="p-2 border-b">${measure?.m || '-'}</td>
+                    <td class="p-2 border-b">${tasks.filter(t=>t.done).length}/${tasks.length}</td>
+                </tr>`;
+            }).join('');
+            
+            document.getElementById('statsSummary').innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-2xl">
+                    <p class="text-[10px] text-blue-600 font-bold uppercase">Średnie kalorie</p>
+                    <p class="text-2xl font-bold text-blue-700">${Math.round(totalKcal / dates.length)}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-2xl">
+                    <p class="text-[10px] text-green-600 font-bold uppercase">Średnie białko</p>
+                    <p class="text-2xl font-bold text-green-700">${(totalProtein / dates.length).toFixed(1)}g</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-2xl">
+                    <p class="text-[10px] text-purple-600 font-bold uppercase">Łącznie kroków</p>
+                    <p class="text-2xl font-bold text-purple-700">${totalSteps.toLocaleString()}</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-2xl">
+                    <p class="text-[10px] text-orange-600 font-bold uppercase">Łącznie stron</p>
+                    <p class="text-2xl font-bold text-orange-700">${totalPages}</p>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
