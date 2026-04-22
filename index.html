@@ -36,7 +36,7 @@
             <div class="bg-white rounded-3xl shadow-2xl p-8 space-y-4">
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Email</label>
-                    <input type="email" id="loginEmail" placeholder="Twój email" class="w-full bg-slate-50 border-none rounded-xl p-4 text-sm mt-1">
+                    <input type="email" id="loginEmail" placeholder="mnikami@kamil.life" class="w-full bg-slate-50 border-none rounded-xl p-4 text-sm mt-1">
                 </div>
 
                 <div>
@@ -44,22 +44,11 @@
                     <input type="password" id="loginPassword" placeholder="Hasło" class="w-full bg-slate-50 border-none rounded-xl p-4 text-sm mt-1">
                 </div>
 
-                <div class="space-y-2">
-                    <button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
-                        Zaloguj się
-                    </button>
-                    <button onclick="toggleSignupMode()" class="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-200 transition">
-                        Załóż konto
-                    </button>
-                </div>
+                <button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
+                    Zaloguj się
+                </button>
 
                 <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-sm text-center"></div>
-
-                <div class="border-t pt-4">
-                    <button onclick="quickLogin()" class="w-full bg-green-50 text-green-700 py-3 rounded-2xl font-bold text-sm border border-green-200 hover:bg-green-100 transition">
-                        🔥 Testowe konto: Mnikami Kamil#1997
-                    </button>
-                </div>
 
                 <div id="connectionStatus" class="text-center text-[10px] font-bold text-slate-400 uppercase">Inicjalizacja...</div>
             </div>
@@ -384,7 +373,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -407,7 +396,6 @@
         let currentMeal = [];
         let cameraStream = null;
         let isInitialized = false;
-        let isSignupMode = false;
         
         let state = {
             dutyDB: [], 
@@ -421,24 +409,7 @@
             running: { sessions: [] }
         };
 
-        // ✅ TOGGLE SIGNUP MODE
-        window.toggleSignupMode = () => {
-            isSignupMode = !isSignupMode;
-            const btn = event.target;
-            btn.innerText = isSignupMode ? 'Mam konto' : 'Załóż konto';
-            document.getElementById('loginEmail').placeholder = isSignupMode ? 'Nowy email' : 'Twój email';
-            document.getElementById('loginPassword').placeholder = isSignupMode ? 'Nowe hasło' : 'Hasło';
-        };
-
-        // ✅ SZYBKIE LOGOWANIE TESTOWE
-        window.quickLogin = async () => {
-            document.getElementById('loginEmail').value = 'mnikami@kamil.life';
-            document.getElementById('loginPassword').value = 'Mnikami Kamil#1997';
-            isSignupMode = false;
-            handleLogin();
-        };
-
-        // ✅ OBSŁUGA LOGOWANIA/REJESTRACJI
+        // ✅ OBSŁUGA LOGOWANIA
         window.handleLogin = async () => {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -454,42 +425,20 @@
 
             try {
                 await setPersistence(auth, browserLocalPersistence);
-
-                if (isSignupMode) {
-                    // Rejestracja nowego użytkownika
-                    const result = await createUserWithEmailAndPassword(auth, email, password);
-                    console.log('✅ Nowe konto:', result.user.email);
-                    
-                    // Inicjalizuj stan dla nowego użytkownika
-                    state = {
-                        dutyDB: [], 
-                        calendar: {}, 
-                        reading: { logs: {}, books: [] }, 
-                        steps: {},
-                        diet: { logs: {} }, 
-                        measure: {}, 
-                        workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } },
-                        cycling: { sessions: [] },
-                        running: { sessions: [] }
-                    };
-                    await setDoc(doc(db, 'artifacts', appId, 'users', result.user.uid, 'data', 'main'), state);
-                } else {
-                    // Logowanie istniejącego użytkownika
-                    await signInWithEmailAndPassword(auth, email, password);
-                    console.log('✅ Zalogowano:', email);
-                }
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log('✅ Zalogowano:', email);
             } catch (error) {
-                console.error('❌ Błąd:', error.code, error.message);
+                console.error('❌ Błąd logowania:', error.code, error.message);
                 errorDiv.classList.remove('hidden');
                 
                 if (error.code === 'auth/user-not-found') {
-                    errorDiv.innerText = 'Użytkownik nie istnieje. Załóż konto!';
+                    errorDiv.innerText = 'Użytkownik nie istnieje!';
                 } else if (error.code === 'auth/wrong-password') {
                     errorDiv.innerText = 'Błędne hasło!';
-                } else if (error.code === 'auth/email-already-in-use') {
-                    errorDiv.innerText = 'Email już zarejestrowany!';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorDiv.innerText = 'Zły format emailu!';
                 } else {
-                    errorDiv.innerText = error.message;
+                    errorDiv.innerText = 'Błąd logowania: ' + error.message;
                 }
             }
         };
@@ -511,7 +460,6 @@
                 document.getElementById('userEmail').innerText = user.email;
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
-                document.getElementById('connectionStatus').innerText = '✅ Online';
                 
                 if (!isInitialized) {
                     setupRealtimeListener();
@@ -571,7 +519,7 @@
 
         const save = saveStateToFirebase;
 
-        // ===== RESZTA KODU (IDENTYCZNA JAK WCZEŚNIEJ) =====
+        // ===== RESZTA FUNKCJI APLIKACJI =====
 
         window.switchWorkoutType = (type) => {
             currentWorkoutType = type;
@@ -721,7 +669,6 @@
                 cameraContainer.style.display = 'block';
             } catch (err) {
                 alert('Nie mogę uzyskać dostępu do kamery.');
-                console.error('Camera error:', err);
             }
         };
 
