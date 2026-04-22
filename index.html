@@ -25,317 +25,366 @@
 </head>
 <body class="bg-slate-50 text-slate-900 pb-24">
 
-    <!-- Header -->
-    <header class="bg-indigo-700 text-white p-6 rounded-b-[2.5rem] shadow-xl mb-6 sticky top-0 z-30">
-        <div class="flex justify-between items-center mb-4">
-            <div>
-                <h1 id="viewTitle" class="text-2xl font-bold">Planer</h1>
-                <p id="todayDate" class="text-indigo-200 text-sm">Ładowanie...</p>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 bg-indigo-700 flex items-center justify-center z-50 p-4">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white mb-2">Life Planner Pro</h1>
+                <p class="text-indigo-200">Zarządzaj swoją zdrowiem i czasem</p>
             </div>
-            <div id="connectionStatus" class="bg-amber-500 p-2 px-3 rounded-full text-[10px] font-bold border border-white/20 uppercase tracking-widest">Inicjalizacja...</div>
-        </div>
-        
-        <div id="topProgressCard" class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs uppercase tracking-wider text-indigo-200 mb-1 font-semibold">Dzisiejsze postępy</p>
-            <div class="flex items-center gap-3">
-                <div class="flex-1 bg-white/20 h-2 rounded-full overflow-hidden">
-                    <div id="progressBar" class="bg-white h-full transition-all duration-500" style="width: 100%"></div>
-                </div>
-                <span id="progressText" class="text-sm font-bold text-white">100%</span>
-            </div>
-        </div>
-    </header>
 
-    <main class="px-4 max-w-lg mx-auto lg:max-w-6xl">
-        <!-- PLANER -->
-        <section id="view-dashboard" class="view-section active space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 id="currentMonthYear" class="font-bold text-lg text-slate-800">Miesiąc Rok</h2>
-                    <div class="flex gap-2">
-                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-left text-slate-400"></i></button>
-                        <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-right text-slate-400"></i></button>
+            <div class="bg-white rounded-3xl shadow-2xl p-8 space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Email</label>
+                    <input type="email" id="loginEmail" placeholder="Twój email" class="w-full bg-slate-50 border-none rounded-xl p-4 text-sm mt-1">
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Hasło</label>
+                    <input type="password" id="loginPassword" placeholder="Hasło" class="w-full bg-slate-50 border-none rounded-xl p-4 text-sm mt-1">
+                </div>
+
+                <div class="space-y-2">
+                    <button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
+                        Zaloguj się
+                    </button>
+                    <button onclick="toggleSignupMode()" class="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-200 transition">
+                        Załóż konto
+                    </button>
+                </div>
+
+                <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-sm text-center"></div>
+
+                <div class="border-t pt-4">
+                    <button onclick="quickLogin()" class="w-full bg-green-50 text-green-700 py-3 rounded-2xl font-bold text-sm border border-green-200 hover:bg-green-100 transition">
+                        🔥 Testowe konto: Mnikami Kamil#1997
+                    </button>
+                </div>
+
+                <div id="connectionStatus" class="text-center text-[10px] font-bold text-slate-400 uppercase">Inicjalizacja...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="appContainer" style="display: none;">
+        <!-- Header -->
+        <header class="bg-indigo-700 text-white p-6 rounded-b-[2.5rem] shadow-xl mb-6 sticky top-0 z-30">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h1 id="viewTitle" class="text-2xl font-bold">Planer</h1>
+                    <p id="todayDate" class="text-indigo-200 text-sm">Ładowanie...</p>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <div id="userEmail" class="text-[10px] text-indigo-200 font-bold text-right"></div>
+                    <button onclick="handleLogout()" class="bg-indigo-600 hover:bg-indigo-800 p-2 px-3 rounded-xl text-[10px] font-bold text-white">
+                        Wyloguj
+                    </button>
+                </div>
+            </div>
+            
+            <div id="topProgressCard" class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
+                <p class="text-xs uppercase tracking-wider text-indigo-200 mb-1 font-semibold">Dzisiejsze postępy</p>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 bg-white/20 h-2 rounded-full overflow-hidden">
+                        <div id="progressBar" class="bg-white h-full transition-all duration-500" style="width: 100%"></div>
                     </div>
+                    <span id="progressText" class="text-sm font-bold text-white">100%</span>
                 </div>
-                <div id="calendarDays" class="grid grid-cols-7 gap-1"></div>
             </div>
+        </header>
 
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <h3 class="font-bold text-slate-800 mb-4">Baza Twoich zadań</h3>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="dbInput" placeholder="Np. Pranie, Nauka..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
-                    <button onclick="addToDatabase()" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"><i class="fas fa-plus"></i></button>
-                </div>
-                <div id="dutyDatabase" class="flex flex-wrap gap-2"></div>
-            </div>
-        </section>
-
-        <!-- TRENING -->
-        <section id="view-workout" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-                    <button onclick="switchWorkoutType('plan1')" id="btnPlan1" class="workout-tab active flex-1 py-3 rounded-2xl font-bold text-sm shadow-lg">Plan A</button>
-                    <button onclick="switchWorkoutType('plan2')" id="btnPlan2" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">Plan B</button>
-                    <button onclick="switchWorkoutType('cycling')" id="btnCycling" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🚴 Rower</button>
-                    <button onclick="switchWorkoutType('running')" id="btnRunning" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🏃 Bieganie</button>
+        <main class="px-4 max-w-lg mx-auto lg:max-w-6xl">
+            <!-- PLANER -->
+            <section id="view-dashboard" class="view-section active space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="currentMonthYear" class="font-bold text-lg text-slate-800">Miesiąc Rok</h2>
+                        <div class="flex gap-2">
+                            <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-left text-slate-400"></i></button>
+                            <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl"><i class="fas fa-chevron-right text-slate-400"></i></button>
+                        </div>
+                    </div>
+                    <div id="calendarDays" class="grid grid-cols-7 gap-1"></div>
                 </div>
 
-                <div id="planWorkoutContent">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                    <h3 class="font-bold text-slate-800 mb-4">Baza Twoich zadań</h3>
                     <div class="flex gap-2 mb-4">
-                        <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
-                        <button onclick="addExercise()" class="bg-emerald-500 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
+                        <input type="text" id="dbInput" placeholder="Np. Pranie, Nauka..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
+                        <button onclick="addToDatabase()" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"><i class="fas fa-plus"></i></button>
                     </div>
-                    
-                    <div class="mb-4">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Data treningu:</label>
-                        <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border-none rounded-xl p-2 text-sm">
+                    <div id="dutyDatabase" class="flex flex-wrap gap-2"></div>
+                </div>
+            </section>
+
+            <!-- TRENING -->
+            <section id="view-workout" class="view-section space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+                        <button onclick="switchWorkoutType('plan1')" id="btnPlan1" class="workout-tab active flex-1 py-3 rounded-2xl font-bold text-sm shadow-lg">Plan A</button>
+                        <button onclick="switchWorkoutType('plan2')" id="btnPlan2" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">Plan B</button>
+                        <button onclick="switchWorkoutType('cycling')" id="btnCycling" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🚴 Rower</button>
+                        <button onclick="switchWorkoutType('running')" id="btnRunning" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🏃 Bieganie</button>
                     </div>
 
-                    <div class="workout-table-container">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50">
-                                <tr id="workoutTableHead">
-                                    <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>
+                    <div id="planWorkoutContent">
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
+                            <button onclick="addExercise()" class="bg-emerald-500 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Data treningu:</label>
+                            <input type="date" id="workoutDateInput" class="w-full bg-slate-50 border-none rounded-xl p-2 text-sm">
+                        </div>
+
+                        <div class="workout-table-container">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50">
+                                    <tr id="workoutTableHead">
+                                        <th class="p-3 text-[10px] font-bold text-slate-400 sticky-col">Ćwiczenie (Nowa Sesja)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workoutTableBody"></tbody>
+                            </table>
+                        </div>
+                        <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję (5 serii)</button>
+                    </div>
+
+                    <div id="cyclingContent" style="display: none;">
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
+                                    <input type="number" id="cyclingTime" placeholder="np. 45" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
+                                    <input type="number" id="cyclingDistance" step="0.1" placeholder="np. 12.5" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
+                                <input type="text" id="cyclingComment" placeholder="np. Szybki przejazd w parku" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                            <button onclick="saveCyclingSession()" class="w-full bg-cyan-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz jazdę</button>
+                        </div>
+                        <div id="cyclingHistory" class="space-y-2 mt-6"></div>
+                    </div>
+
+                    <div id="runningContent" style="display: none;">
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
+                                    <input type="number" id="runningTime" placeholder="np. 30" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
+                                    <input type="number" id="runningDistance" step="0.1" placeholder="np. 5.2" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
+                                <input type="text" id="runningComment" placeholder="np. Tempowe bieganie, zmęczenie średnie" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            </div>
+                            <button onclick="saveRunningSession()" class="w-full bg-red-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz bieg</button>
+                        </div>
+                        <div id="runningHistory" class="space-y-2 mt-6"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CZYTANIE -->
+            <section id="view-reading" class="view-section space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">Strony przeczytane dzisiaj</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="readingPageInput" class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
+                        <button onclick="logReading()" class="bg-indigo-600 text-white px-6 rounded-2xl font-bold">Zapisz</button>
+                    </div>
+                </div>
+                <div id="readingHistory" class="space-y-2"></div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mt-6">
+                    <h3 class="font-bold text-slate-800 mb-4">Przeczytane książki</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="bookTitleInput" placeholder="Tytuł książki" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addBook()" class="bg-indigo-600 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="booksList" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <!-- DIETA -->
+            <section id="view-diet" class="view-section space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">📱 Skaner kodów kreskowych</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Skanuj lub wpisz kod kreskowy</label>
+                            <input type="text" id="barcodeInput" placeholder="Skanuj kod lub wpisz UPC..." class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" autofocus>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openCameraScanner()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold">📷 Otwórz aparat</button>
+                            <button onclick="scanBarcodeManual()" class="flex-1 bg-cyan-600 text-white py-3 rounded-2xl font-bold">🔍 Skanuj tekst</button>
+                        </div>
+                    </div>
+                    <div id="cameraContainer" style="display: none;" class="mt-4">
+                        <video id="cameraVideo" class="w-full rounded-xl" style="max-height: 400px;"></video>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="closeCameraScanner()" class="flex-1 bg-red-500 text-white py-2 rounded-xl font-bold">Zamknij kamerę</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="productSearchResults" class="space-y-2"></div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">📅 Wybierz dzień</h3>
+                    <input type="date" id="mealDateInput" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">🍽️ Twój posiłek</h3>
+                    <div id="mealItems" class="space-y-3 mb-6"></div>
+                    
+                    <div class="grid grid-cols-2 gap-3 p-4 bg-indigo-50 rounded-2xl mb-4">
+                        <div>
+                            <p class="text-[10px] text-indigo-500 font-bold uppercase">Kalorie</p>
+                            <p class="text-2xl font-bold text-indigo-700" id="mealTotalKcal">0</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-indigo-500 font-bold uppercase">Białko (g)</p>
+                            <p class="text-2xl font-bold text-indigo-700" id="mealTotalProtein">0</p>
+                        </div>
+                    </div>
+
+                    <button onclick="saveMealToHistory()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz posiłek</button>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">✏️ Lub wpisz produkt ręcznie</h3>
+                    <div class="space-y-3">
+                        <input type="text" id="manualProductName" placeholder="Np. Kurczak pieczony" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" id="manualKcal" placeholder="Kcal (na 100g)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                            <input type="number" id="manualProtein" placeholder="Białko (g na 100g)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                        </div>
+                        <input type="number" id="manualGrams" placeholder="Waga (gramy)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                        <button onclick="addManualProduct()" class="w-full bg-emerald-600 text-white py-3 rounded-2xl font-bold">Dodaj do posiłku</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">📊 Historia posiłków</h3>
+                    <div id="mealHistory" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <!-- KROKI -->
+            <section id="view-steps" class="view-section space-y-6">
+                <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 text-center">
+                    <h3 class="text-4xl font-bold text-indigo-600 mb-2" id="currentStepsDisplay">0</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase mb-6">Kroków dzisiaj</p>
+                    <div class="flex gap-2">
+                        <input type="number" id="stepsInput" placeholder="Liczba kroków..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-4 text-center font-bold">
+                        <button onclick="logSteps()" class="bg-indigo-600 text-white px-8 rounded-2xl font-bold">OK</button>
+                    </div>
+                </div>
+                <div id="stepsHistory" class="space-y-2"></div>
+            </section>
+
+            <!-- POMIARY -->
+            <section id="view-measure" class="view-section space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4 text-center">Skład ciała</h3>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <input type="number" step="0.1" id="weightInput" placeholder="Waga (kg)" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
+                        <input type="number" step="0.1" id="fatInput" placeholder="Tłuszcz %" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
+                        <input type="number" step="0.1" id="muscleInput" placeholder="Mięśnie %" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
+                    </div>
+                    <button onclick="logMeasure()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold">Zapisz pomiar</button>
+                </div>
+                <div id="measureHistory" class="space-y-2"></div>
+            </section>
+
+            <!-- ROZBUDOWANE STATYSTYKI -->
+            <section id="view-stats" class="view-section space-y-6">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">Centrum Analityczne</h3>
+                    
+                    <div class="bg-slate-50 p-4 rounded-2xl mb-6 space-y-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Wybierz zakres dat</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[8px] text-slate-400">OD</label>
+                                <input type="date" id="statsDateFrom" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-[8px] text-slate-400">DO</label>
+                                <input type="date" id="statsDateTo" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
+                            </div>
+                        </div>
+                        <button onclick="renderStats()" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-xs font-bold shadow-sm">Generuj Raport</button>
+                    </div>
+
+                    <div id="statsSummary" class="grid grid-cols-2 gap-3 mb-6"></div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-[10px] border-collapse" id="statsTable">
+                            <thead>
+                                <tr class="bg-slate-50">
+                                    <th class="p-2 border-b text-left">Data</th>
+                                    <th class="p-2 border-b text-left">Kalorie</th>
+                                    <th class="p-2 border-b text-left">Białko</th>
+                                    <th class="p-2 border-b text-left">Kroki</th>
+                                    <th class="p-2 border-b text-left">Strony</th>
+                                    <th class="p-2 border-b text-left">Waga</th>
+                                    <th class="p-2 border-b text-left">Tłuszcz %</th>
+                                    <th class="p-2 border-b text-left">Mięśnie %</th>
+                                    <th class="p-2 border-b text-left">Zadania</th>
                                 </tr>
                             </thead>
-                            <tbody id="workoutTableBody"></tbody>
+                            <tbody id="statsTableBody"></tbody>
                         </table>
                     </div>
-                    <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję (5 serii)</button>
                 </div>
+            </section>
+        </main>
 
-                <div id="cyclingContent" style="display: none;">
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
-                                <input type="number" id="cyclingTime" placeholder="np. 45" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
-                                <input type="number" id="cyclingDistance" step="0.1" placeholder="np. 12.5" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
-                            <input type="text" id="cyclingComment" placeholder="np. Szybki przejazd w parku" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                        </div>
-                        <button onclick="saveCyclingSession()" class="w-full bg-cyan-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz jazdę</button>
-                    </div>
-                    <div id="cyclingHistory" class="space-y-2 mt-6"></div>
+        <!-- Nawigacja Dolna -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t px-2 py-3 flex justify-around items-center z-40">
+            <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1" data-view="dashboard"><i class="fas fa-calendar-check"></i><span class="text-[8px] font-bold">PLAN</span></button>
+            <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1" data-view="workout"><i class="fas fa-dumbbell"></i><span class="text-[8px] font-bold">TRENING</span></button>
+            <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1" data-view="reading"><i class="fas fa-book"></i><span class="text-[8px] font-bold">CZYTANIE</span></button>
+            <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1" data-view="steps"><i class="fas fa-shoe-prints"></i><span class="text-[8px] font-bold">KROKI</span></button>
+            <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center gap-1" data-view="diet"><i class="fas fa-apple-alt"></i><span class="text-[8px] font-bold">DIETA</span></button>
+            <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center gap-1" data-view="measure"><i class="fas fa-weight"></i><span class="text-[8px] font-bold">POMIARY</span></button>
+            <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1" data-view="stats"><i class="fas fa-chart-line"></i><span class="text-[8px] font-bold">STATS</span></button>
+        </nav>
+
+        <!-- Modal Zadań -->
+        <div id="modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end justify-center z-50 p-4">
+            <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm">
+                <h3 id="modalDateDisplay" class="font-bold text-xl mb-4 text-indigo-600"></h3>
+                <div id="selectedDayTasks" class="space-y-2 mb-6 max-h-48 overflow-y-auto"></div>
+                <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-slate-50 border-none rounded-xl p-3 mb-2 text-sm">
+                    <option value="">Wybierz z bazy...</option>
+                </select>
+                <input type="text" id="customTaskInput" placeholder="Lub wpisz własne..." class="w-full bg-slate-50 border-none rounded-xl p-3 mb-4 text-sm">
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="flex-1 py-4 font-bold text-slate-400">Zamknij</button>
+                    <button onclick="addTaskToDay()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold">Dodaj</button>
                 </div>
-
-                <div id="runningContent" style="display: none;">
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Czas (minuty)</label>
-                                <input type="number" id="runningTime" placeholder="np. 30" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Dystans (km)</label>
-                                <input type="number" id="runningDistance" step="0.1" placeholder="np. 5.2" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase">Komentarz</label>
-                            <input type="text" id="runningComment" placeholder="np. Tempowe bieganie, zmęczenie średnie" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                        </div>
-                        <button onclick="saveRunningSession()" class="w-full bg-red-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz bieg</button>
-                    </div>
-                    <div id="runningHistory" class="space-y-2 mt-6"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CZYTANIE -->
-        <section id="view-reading" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">Strony przeczytane dzisiaj</h3>
-                <div class="flex gap-2">
-                    <input type="number" id="readingPageInput" class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm">
-                    <button onclick="logReading()" class="bg-indigo-600 text-white px-6 rounded-2xl font-bold">Zapisz</button>
-                </div>
-            </div>
-            <div id="readingHistory" class="space-y-2"></div>
-
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mt-6">
-                <h3 class="font-bold text-slate-800 mb-4">Przeczytane książki</h3>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="bookTitleInput" placeholder="Tytuł książki" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
-                    <button onclick="addBook()" class="bg-indigo-600 text-white px-4 rounded-xl font-bold"><i class="fas fa-plus"></i></button>
-                </div>
-                <div id="booksList" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <!-- DIETA -->
-        <section id="view-diet" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">📱 Skaner kodów kreskowych</h3>
-                <div class="space-y-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Skanuj lub wpisz kod kreskowy</label>
-                        <input type="text" id="barcodeInput" placeholder="Skanuj kod lub wpisz UPC..." class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" autofocus>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="openCameraScanner()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold">📷 Otwórz aparat</button>
-                        <button onclick="scanBarcodeManual()" class="flex-1 bg-cyan-600 text-white py-3 rounded-2xl font-bold">🔍 Skanuj tekst</button>
-                    </div>
-                </div>
-                <div id="cameraContainer" style="display: none;" class="mt-4">
-                    <video id="cameraVideo" class="w-full rounded-xl" style="max-height: 400px;"></video>
-                    <div class="flex gap-2 mt-2">
-                        <button onclick="closeCameraScanner()" class="flex-1 bg-red-500 text-white py-2 rounded-xl font-bold">Zamknij kamerę</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="productSearchResults" class="space-y-2"></div>
-
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">📅 Wybierz dzień</h3>
-                <input type="date" id="mealDateInput" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-            </div>
-
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">🍽️ Twój posiłek</h3>
-                <div id="mealItems" class="space-y-3 mb-6"></div>
-                
-                <div class="grid grid-cols-2 gap-3 p-4 bg-indigo-50 rounded-2xl mb-4">
-                    <div>
-                        <p class="text-[10px] text-indigo-500 font-bold uppercase">Kalorie</p>
-                        <p class="text-2xl font-bold text-indigo-700" id="mealTotalKcal">0</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-indigo-500 font-bold uppercase">Białko (g)</p>
-                        <p class="text-2xl font-bold text-indigo-700" id="mealTotalProtein">0</p>
-                    </div>
-                </div>
-
-                <button onclick="saveMealToHistory()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz posiłek</button>
-            </div>
-
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">✏️ Lub wpisz produkt ręcznie</h3>
-                <div class="space-y-3">
-                    <input type="text" id="manualProductName" placeholder="Np. Kurczak pieczony" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                    <div class="grid grid-cols-2 gap-3">
-                        <input type="number" id="manualKcal" placeholder="Kcal (na 100g)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                        <input type="number" id="manualProtein" placeholder="Białko (g na 100g)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                    </div>
-                    <input type="number" id="manualGrams" placeholder="Waga (gramy)" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
-                    <button onclick="addManualProduct()" class="w-full bg-emerald-600 text-white py-3 rounded-2xl font-bold">Dodaj do posiłku</button>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">📊 Historia posiłków</h3>
-                <div id="mealHistory" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <!-- KROKI -->
-        <section id="view-steps" class="view-section space-y-6">
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 text-center">
-                <h3 class="text-4xl font-bold text-indigo-600 mb-2" id="currentStepsDisplay">0</h3>
-                <p class="text-xs text-slate-400 font-bold uppercase mb-6">Kroków dzisiaj</p>
-                <div class="flex gap-2">
-                    <input type="number" id="stepsInput" placeholder="Liczba kroków..." class="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-4 text-center font-bold">
-                    <button onclick="logSteps()" class="bg-indigo-600 text-white px-8 rounded-2xl font-bold">OK</button>
-                </div>
-            </div>
-            <div id="stepsHistory" class="space-y-2"></div>
-        </section>
-
-        <!-- POMIARY -->
-        <section id="view-measure" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4 text-center">Skład ciała</h3>
-                <div class="grid grid-cols-3 gap-2 mb-4">
-                    <input type="number" step="0.1" id="weightInput" placeholder="Waga (kg)" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
-                    <input type="number" step="0.1" id="fatInput" placeholder="Tłuszcz %" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
-                    <input type="number" step="0.1" id="muscleInput" placeholder="Mięśnie %" class="bg-slate-50 border-none rounded-xl p-3 text-center text-xs">
-                </div>
-                <button onclick="logMeasure()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold">Zapisz pomiar</button>
-            </div>
-            <div id="measureHistory" class="space-y-2"></div>
-        </section>
-
-        <!-- ROZBUDOWANE STATYSTYKI -->
-        <section id="view-stats" class="view-section space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="font-bold text-slate-800 mb-4">Centrum Analityczne</h3>
-                
-                <div class="bg-slate-50 p-4 rounded-2xl mb-6 space-y-3">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Wybierz zakres dat</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[8px] text-slate-400">OD</label>
-                            <input type="date" id="statsDateFrom" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
-                        </div>
-                        <div>
-                            <label class="text-[8px] text-slate-400">DO</label>
-                            <input type="date" id="statsDateTo" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs">
-                        </div>
-                    </div>
-                    <button onclick="renderStats()" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-xs font-bold shadow-sm">Generuj Raport</button>
-                </div>
-
-                <div id="statsSummary" class="grid grid-cols-2 gap-3 mb-6"></div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-[10px] border-collapse" id="statsTable">
-                        <thead>
-                            <tr class="bg-slate-50">
-                                <th class="p-2 border-b text-left">Data</th>
-                                <th class="p-2 border-b text-left">Kalorie</th>
-                                <th class="p-2 border-b text-left">Białko</th>
-                                <th class="p-2 border-b text-left">Kroki</th>
-                                <th class="p-2 border-b text-left">Strony</th>
-                                <th class="p-2 border-b text-left">Waga</th>
-                                <th class="p-2 border-b text-left">Tłuszcz %</th>
-                                <th class="p-2 border-b text-left">Mięśnie %</th>
-                                <th class="p-2 border-b text-left">Zadania</th>
-                            </tr>
-                        </thead>
-                        <tbody id="statsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Nawigacja Dolna -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t px-2 py-3 flex justify-around items-center z-40">
-        <button onclick="switchView('dashboard')" class="nav-btn active flex flex-col items-center gap-1" data-view="dashboard"><i class="fas fa-calendar-check"></i><span class="text-[8px] font-bold">PLAN</span></button>
-        <button onclick="switchView('workout')" class="nav-btn flex flex-col items-center gap-1" data-view="workout"><i class="fas fa-dumbbell"></i><span class="text-[8px] font-bold">TRENING</span></button>
-        <button onclick="switchView('reading')" class="nav-btn flex flex-col items-center gap-1" data-view="reading"><i class="fas fa-book"></i><span class="text-[8px] font-bold">CZYTANIE</span></button>
-        <button onclick="switchView('steps')" class="nav-btn flex flex-col items-center gap-1" data-view="steps"><i class="fas fa-shoe-prints"></i><span class="text-[8px] font-bold">KROKI</span></button>
-        <button onclick="switchView('diet')" class="nav-btn flex flex-col items-center gap-1" data-view="diet"><i class="fas fa-apple-alt"></i><span class="text-[8px] font-bold">DIETA</span></button>
-        <button onclick="switchView('measure')" class="nav-btn flex flex-col items-center gap-1" data-view="measure"><i class="fas fa-weight"></i><span class="text-[8px] font-bold">POMIARY</span></button>
-        <button onclick="switchView('stats')" class="nav-btn flex flex-col items-center gap-1" data-view="stats"><i class="fas fa-chart-line"></i><span class="text-[8px] font-bold">STATS</span></button>
-    </nav>
-
-    <!-- Modal Zadań -->
-    <div id="modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end justify-center z-50 p-4">
-        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm">
-            <h3 id="modalDateDisplay" class="font-bold text-xl mb-4 text-indigo-600"></h3>
-            <div id="selectedDayTasks" class="space-y-2 mb-6 max-h-48 overflow-y-auto"></div>
-            <select id="modalDutySelect" onchange="addFromDB(this.value)" class="w-full bg-slate-50 border-none rounded-xl p-3 mb-2 text-sm">
-                <option value="">Wybierz z bazy...</option>
-            </select>
-            <input type="text" id="customTaskInput" placeholder="Lub wpisz własne..." class="w-full bg-slate-50 border-none rounded-xl p-3 mb-4 text-sm">
-            <div class="flex gap-3">
-                <button onclick="closeModal()" class="flex-1 py-4 font-bold text-slate-400">Zamknij</button>
-                <button onclick="addTaskToDay()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold">Dodaj</button>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -353,16 +402,12 @@
         const db = getFirestore(app);
         const appId = 'life-planner-v1';
 
-        // Stałe dane logowania
-        const EMAIL = 'kamil@aklettka.life';
-        const PASSWORD = 'Mnikami Kamil#1997';
-
         let user = null;
         let currentWorkoutType = 'plan1';
         let currentMeal = [];
         let cameraStream = null;
-        let selectedMealDate = new Date().toISOString().split('T')[0];
         let isInitialized = false;
+        let isSignupMode = false;
         
         let state = {
             dutyDB: [], 
@@ -376,37 +421,110 @@
             running: { sessions: [] }
         };
 
-        // ✅ AUTO-LOGOWANIE Z PERSISTENCJĄ
-        const initAuth = async () => {
+        // ✅ TOGGLE SIGNUP MODE
+        window.toggleSignupMode = () => {
+            isSignupMode = !isSignupMode;
+            const btn = event.target;
+            btn.innerText = isSignupMode ? 'Mam konto' : 'Załóż konto';
+            document.getElementById('loginEmail').placeholder = isSignupMode ? 'Nowy email' : 'Twój email';
+            document.getElementById('loginPassword').placeholder = isSignupMode ? 'Nowe hasło' : 'Hasło';
+        };
+
+        // ✅ SZYBKIE LOGOWANIE TESTOWE
+        window.quickLogin = async () => {
+            document.getElementById('loginEmail').value = 'mnikami@kamil.life';
+            document.getElementById('loginPassword').value = 'Mnikami Kamil#1997';
+            isSignupMode = false;
+            handleLogin();
+        };
+
+        // ✅ OBSŁUGA LOGOWANIA/REJESTRACJI
+        window.handleLogin = async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            if (!email || !password) {
+                errorDiv.classList.remove('hidden');
+                errorDiv.innerText = 'Uzupełnij email i hasło!';
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+
             try {
                 await setPersistence(auth, browserLocalPersistence);
-                await signInWithEmailAndPassword(auth, EMAIL, PASSWORD);
-                console.log('✅ Zalogowano jako:', EMAIL);
+
+                if (isSignupMode) {
+                    // Rejestracja nowego użytkownika
+                    const result = await createUserWithEmailAndPassword(auth, email, password);
+                    console.log('✅ Nowe konto:', result.user.email);
+                    
+                    // Inicjalizuj stan dla nowego użytkownika
+                    state = {
+                        dutyDB: [], 
+                        calendar: {}, 
+                        reading: { logs: {}, books: [] }, 
+                        steps: {},
+                        diet: { logs: {} }, 
+                        measure: {}, 
+                        workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } },
+                        cycling: { sessions: [] },
+                        running: { sessions: [] }
+                    };
+                    await setDoc(doc(db, 'artifacts', appId, 'users', result.user.uid, 'data', 'main'), state);
+                } else {
+                    // Logowanie istniejącego użytkownika
+                    await signInWithEmailAndPassword(auth, email, password);
+                    console.log('✅ Zalogowano:', email);
+                }
             } catch (error) {
-                console.error('❌ Błąd logowania:', error.code, error.message);
-                document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
-                document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
+                console.error('❌ Błąd:', error.code, error.message);
+                errorDiv.classList.remove('hidden');
+                
+                if (error.code === 'auth/user-not-found') {
+                    errorDiv.innerText = 'Użytkownik nie istnieje. Załóż konto!';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorDiv.innerText = 'Błędne hasło!';
+                } else if (error.code === 'auth/email-already-in-use') {
+                    errorDiv.innerText = 'Email już zarejestrowany!';
+                } else {
+                    errorDiv.innerText = error.message;
+                }
             }
         };
 
-        auth.onAuthStateChanged(async (u) => {
+        // ✅ OBSŁUGA WYLOGOWANIA
+        window.handleLogout = async () => {
+            if (confirm('Czy na pewno chcesz się wylogować?')) {
+                await signOut(auth);
+                isInitialized = false;
+                console.log('✅ Wylogowano');
+            }
+        };
+
+        // ✅ SPRAWDZENIE STANU AUTENTYKACJI
+        onAuthStateChanged(auth, (u) => {
             if (u) {
                 user = u;
-                console.log('✅ Użytkownik:', user.email);
-                document.getElementById('connectionStatus').innerText = 'Online';
-                document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
+                console.log('✅ Użytkownik zalogowany:', user.email);
+                document.getElementById('userEmail').innerText = user.email;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('connectionStatus').innerText = '✅ Online';
                 
                 if (!isInitialized) {
                     setupRealtimeListener();
                     isInitialized = true;
                 }
             } else {
-                console.log('ℹ️ Brak użytkownika, logowanie...');
-                initAuth();
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+                console.log('ℹ️ Brak zalogowanego użytkownika');
             }
         });
 
-        // ✅ REAL-TIME LISTENER - ZAWSZE POBIERA Z FIREBASE
+        // ✅ REAL-TIME LISTENER
         function setupRealtimeListener() {
             if (!user) return;
             
@@ -417,7 +535,6 @@
                     const fbData = snap.data();
                     state = { ...state, ...fbData };
                     
-                    // Upewnij się że struktury istnieją
                     if(!state.reading) state.reading = { logs: {}, books: [] };
                     if(!state.reading.books) state.reading.books = [];
                     if(!state.cycling) state.cycling = { sessions: [] };
@@ -425,20 +542,18 @@
                     if(!state.diet) state.diet = { logs: {} };
                     if(!state.workout) state.workout = { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } };
                     
-                    console.log('🔄 Dane zsynchronizowane z Firebase');
+                    console.log('🔄 Dane zsynchronizowane');
                     renderAll();
                 } else {
                     console.log('📄 Tworzenie nowego dokumentu');
                     saveStateToFirebase();
                 }
             }, (err) => {
-                console.error('❌ Błąd Real-time:', err);
-                document.getElementById('connectionStatus').innerText = 'Błąd Uprawnień';
-                document.getElementById('connectionStatus').classList.replace('bg-emerald-500', 'bg-red-500');
+                console.error('❌ Błąd synchronizacji:', err);
             });
         }
 
-        // ✅ ZAPISZ STAN DO FIREBASE (nie do localStorage!)
+        // ✅ ZAPISZ DO FIREBASE
         async function saveStateToFirebase() {
             if (!user) return;
             
@@ -454,10 +569,10 @@
             }
         }
 
-        // ✅ GLOBALNY SAVE (alias)
         const save = saveStateToFirebase;
 
-        // ===== TRENING - SYSTEM Z ZAKŁADKAMI =====
+        // ===== RESZTA KODU (IDENTYCZNA JAK WCZEŚNIEJ) =====
+
         window.switchWorkoutType = (type) => {
             currentWorkoutType = type;
             
@@ -594,7 +709,6 @@
             `).join('');
         }
 
-        // ===== DIETA - NOWY SYSTEM Z KAMERĄ =====
         window.openCameraScanner = async () => {
             const cameraContainer = document.getElementById('cameraContainer');
             const video = document.getElementById('cameraVideo');
@@ -606,7 +720,7 @@
                 video.srcObject = cameraStream;
                 cameraContainer.style.display = 'block';
             } catch (err) {
-                alert('Nie mogę uzyskać dostępu do kamery. Sprawdź uprawnienia.');
+                alert('Nie mogę uzyskać dostępu do kamery.');
                 console.error('Camera error:', err);
             }
         };
@@ -643,10 +757,10 @@
                         barcode: barcode
                     });
                 } else {
-                    alert('Produkt nie znaleziony w bazie. Wpisz ręcznie.');
+                    alert('Produkt nie znaleziony w bazie.');
                 }
             } catch(e) {
-                alert('Błąd podczas skanowania. Spróbuj ręcznego wpisania.');
+                alert('Błąd podczas skanowania.');
             }
             
             document.getElementById('barcodeInput').value = '';
@@ -835,7 +949,6 @@
             }
         };
 
-        // ===== POZOSTAŁE FUNKCJE =====
         window.deleteLog = (category, date) => {
             if(category === 'reading') delete state.reading.logs[date];
             if(category === 'diet') delete state.diet.logs[date];
