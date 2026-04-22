@@ -73,7 +73,6 @@
         <!-- TRENING -->
         <section id="view-workout" class="view-section space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5">
-                <!-- Zakładki Treningowe -->
                 <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
                     <button onclick="switchWorkoutType('plan1')" id="btnPlan1" class="workout-tab active flex-1 py-3 rounded-2xl font-bold text-sm shadow-lg">Plan A</button>
                     <button onclick="switchWorkoutType('plan2')" id="btnPlan2" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">Plan B</button>
@@ -81,7 +80,6 @@
                     <button onclick="switchWorkoutType('running')" id="btnRunning" class="workout-tab flex-1 py-3 rounded-2xl font-bold text-sm">🏃 Bieganie</button>
                 </div>
 
-                <!-- PLAN A & B (Ćwiczenia siłowe) -->
                 <div id="planWorkoutContent">
                     <div class="flex gap-2 mb-4">
                         <input type="text" id="exerciseInput" placeholder="Nazwa ćwiczenia" class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
@@ -106,7 +104,6 @@
                     <button onclick="saveWorkoutSession()" class="w-full mt-4 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz sesję (5 serii)</button>
                 </div>
 
-                <!-- ROWER -->
                 <div id="cyclingContent" style="display: none;">
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3">
@@ -128,7 +125,6 @@
                     <div id="cyclingHistory" class="space-y-2 mt-6"></div>
                 </div>
 
-                <!-- BIEGANIE -->
                 <div id="runningContent" style="display: none;">
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3">
@@ -187,7 +183,6 @@
                         <button onclick="scanBarcodeManual()" class="flex-1 bg-cyan-600 text-white py-3 rounded-2xl font-bold">🔍 Skanuj tekst</button>
                     </div>
                 </div>
-                <!-- Podgląd kamery -->
                 <div id="cameraContainer" style="display: none;" class="mt-4">
                     <video id="cameraVideo" class="w-full rounded-xl" style="max-height: 400px;"></video>
                     <div class="flex gap-2 mt-2">
@@ -196,16 +191,13 @@
                 </div>
             </div>
 
-            <!-- Produkty znalezione -->
             <div id="productSearchResults" class="space-y-2"></div>
 
-            <!-- Wybór daty -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-slate-800 mb-4">📅 Wybierz dzień</h3>
                 <input type="date" id="mealDateInput" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
             </div>
 
-            <!-- Dodany produkt do posiłku -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-slate-800 mb-4">🍽️ Twój posiłek</h3>
                 <div id="mealItems" class="space-y-3 mb-6"></div>
@@ -224,7 +216,6 @@
                 <button onclick="saveMealToHistory()" class="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg">Zapisz posiłek</button>
             </div>
 
-            <!-- Ręczne wpisanie produktu -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-slate-800 mb-4">✏️ Lub wpisz produkt ręcznie</h3>
                 <div class="space-y-3">
@@ -238,7 +229,6 @@
                 </div>
             </div>
 
-            <!-- Historia posiłków -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-bold text-slate-800 mb-4">📊 Historia posiłków</h3>
                 <div id="mealHistory" class="space-y-2"></div>
@@ -312,7 +302,6 @@
                         <tbody id="statsTableBody"></tbody>
                     </table>
                 </div>
-                <div id="statsWorkoutHistory" class="mt-8 space-y-4"></div>
             </div>
         </section>
     </main>
@@ -346,7 +335,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -364,90 +353,109 @@
         const db = getFirestore(app);
         const appId = 'life-planner-v1';
 
+        // Stałe dane logowania
+        const EMAIL = 'kamil@aklettka.life';
+        const PASSWORD = 'Mnikami Kamil#1997';
+
         let user = null;
         let currentWorkoutType = 'plan1';
         let currentMeal = [];
         let cameraStream = null;
         let selectedMealDate = new Date().toISOString().split('T')[0];
+        let isInitialized = false;
         
         let state = {
-            dutyDB: [], calendar: {}, reading: { logs: {}, books: [] }, steps: {},
-            diet: { logs: {} }, measure: {}, 
+            dutyDB: [], 
+            calendar: {}, 
+            reading: { logs: {}, books: [] }, 
+            steps: {},
+            diet: { logs: {} }, 
+            measure: {}, 
             workout: { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } },
             cycling: { sessions: [] },
             running: { sessions: [] }
         };
 
-        // ✅ GENERUJ UNIKALNY UID I PRZECHOWUJ GO W localStorage
-        function getOrCreateUID() {
-            let uid = localStorage.getItem('appUID');
-            if (!uid) {
-                // Generuj nowy unikalny UID (timestamp + random)
-                uid = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('appUID', uid);
-            }
-            return uid;
-        }
-
-        const persistentUID = getOrCreateUID();
-
-        // ✅ Zamiast anonimowego logowania, używaj Email/Password
+        // ✅ AUTO-LOGOWANIE Z PERSISTENCJĄ
         const initAuth = async () => {
             try {
-                // Używaj generowanego UID jako email
-                const email = persistentUID + '@lifeplanner.local';
-                const password = 'lifeplanner-secure-password';
-
-                try {
-                    // Spróbuj się zalogować
-                    await signInWithEmailAndPassword(auth, email, password);
-                } catch (error) {
-                    // Jeśli nie ma konta, załóż nowe
-                    if (error.code === 'auth/user-not-found') {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                    } else {
-                        throw error;
-                    }
-                }
-            } catch (e) {
-                console.error('Auth error:', e);
+                await setPersistence(auth, browserLocalPersistence);
+                await signInWithEmailAndPassword(auth, EMAIL, PASSWORD);
+                console.log('✅ Zalogowano jako:', EMAIL);
+            } catch (error) {
+                console.error('❌ Błąd logowania:', error.code, error.message);
                 document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
             }
         };
 
-        onAuthStateChanged(auth, (u) => {
+        auth.onAuthStateChanged(async (u) => {
             if (u) {
                 user = u;
+                console.log('✅ Użytkownik:', user.email);
                 document.getElementById('connectionStatus').innerText = 'Online';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
-                setupListener();
-            } else { 
-                initAuth(); 
+                
+                if (!isInitialized) {
+                    setupRealtimeListener();
+                    isInitialized = true;
+                }
+            } else {
+                console.log('ℹ️ Brak użytkownika, logowanie...');
+                initAuth();
             }
         });
 
-        function setupListener() {
+        // ✅ REAL-TIME LISTENER - ZAWSZE POBIERA Z FIREBASE
+        function setupRealtimeListener() {
             if (!user) return;
-            onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), (snap) => {
+            
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+            
+            onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
-                    state = { ...state, ...snap.data() };
+                    const fbData = snap.data();
+                    state = { ...state, ...fbData };
+                    
+                    // Upewnij się że struktury istnieją
+                    if(!state.reading) state.reading = { logs: {}, books: [] };
                     if(!state.reading.books) state.reading.books = [];
                     if(!state.cycling) state.cycling = { sessions: [] };
                     if(!state.running) state.running = { sessions: [] };
                     if(!state.diet) state.diet = { logs: {} };
+                    if(!state.workout) state.workout = { currentPlan: 1, plans: { 1: { exercises: [] }, 2: { exercises: [] } } };
+                    
+                    console.log('🔄 Dane zsynchronizowane z Firebase');
                     renderAll();
+                } else {
+                    console.log('📄 Tworzenie nowego dokumentu');
+                    saveStateToFirebase();
                 }
             }, (err) => {
+                console.error('❌ Błąd Real-time:', err);
                 document.getElementById('connectionStatus').innerText = 'Błąd Uprawnień';
                 document.getElementById('connectionStatus').classList.replace('bg-emerald-500', 'bg-red-500');
             });
         }
 
-        async function save() {
+        // ✅ ZAPISZ STAN DO FIREBASE (nie do localStorage!)
+        async function saveStateToFirebase() {
             if (!user) return;
-            try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state); } catch (e) { console.error('Save error:', e); }
+            
+            try {
+                await setDoc(
+                    doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'),
+                    state,
+                    { merge: true }
+                );
+                console.log('💾 Zapisano do Firebase');
+            } catch (error) {
+                console.error('❌ Błąd zapisu:', error);
+            }
         }
+
+        // ✅ GLOBALNY SAVE (alias)
+        const save = saveStateToFirebase;
 
         // ===== TRENING - SYSTEM Z ZAKŁADKAMI =====
         window.switchWorkoutType = (type) => {
