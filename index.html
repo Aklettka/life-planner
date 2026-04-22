@@ -346,7 +346,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -378,21 +378,39 @@
             running: { sessions: [] }
         };
 
-        // ✅ ZMIANA: Inicjalizacja z localStorage
+        // ✅ GENERUJ UNIKALNY UID I PRZECHOWUJ GO W localStorage
+        function getOrCreateUID() {
+            let uid = localStorage.getItem('appUID');
+            if (!uid) {
+                // Generuj nowy unikalny UID (timestamp + random)
+                uid = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('appUID', uid);
+            }
+            return uid;
+        }
+
+        const persistentUID = getOrCreateUID();
+
+        // ✅ Zamiast anonimowego logowania, używaj Email/Password
         const initAuth = async () => {
-            try { 
-                // Sprawdź, czy jest już zapisany UID w localStorage
-                const savedUID = localStorage.getItem('appUID');
-                
-                if (!savedUID) {
-                    // Pierwszy raz - zaloguj anonimowo i zapisz UID
-                    await signInAnonymously(auth);
-                } else {
-                    // Już mamy zapisany UID - zaloguj się tym samym użytkownikiem
-                    // Firebase automatycznie będzie pamiętać tego użytkownika
-                    await signInAnonymously(auth);
+            try {
+                // Używaj generowanego UID jako email
+                const email = persistentUID + '@lifeplanner.local';
+                const password = 'lifeplanner-secure-password';
+
+                try {
+                    // Spróbuj się zalogować
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    // Jeśli nie ma konta, załóż nowe
+                    if (error.code === 'auth/user-not-found') {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        throw error;
+                    }
                 }
             } catch (e) {
+                console.error('Auth error:', e);
                 document.getElementById('connectionStatus').innerText = 'Błąd Logowania';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-red-500');
             }
@@ -400,11 +418,6 @@
 
         onAuthStateChanged(auth, (u) => {
             if (u) {
-                // ✅ ZMIANA: Zapisz UID do localStorage za pierwszym razem
-                if (!localStorage.getItem('appUID')) {
-                    localStorage.setItem('appUID', u.uid);
-                }
-                
                 user = u;
                 document.getElementById('connectionStatus').innerText = 'Online';
                 document.getElementById('connectionStatus').classList.replace('bg-amber-500', 'bg-emerald-500');
@@ -433,7 +446,7 @@
 
         async function save() {
             if (!user) return;
-            try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state); } catch (e) {}
+            try { await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main'), state); } catch (e) { console.error('Save error:', e); }
         }
 
         // ===== TRENING - SYSTEM Z ZAKŁADKAMI =====
